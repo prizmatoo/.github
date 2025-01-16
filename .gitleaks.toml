@@ -1,0 +1,8 @@
+# gitleaks config for prizmatoo/.github.
+# Default rules; add allowlist entries only for documented fixtures, each with a comment saying why.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated files that never hold secrets"
+paths = ['''pnpm-lock\.yaml''']
