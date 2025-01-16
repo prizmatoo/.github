@@ -3,3 +3,5 @@ coverage/
 reports/
 dist/
 pnpm-lock.yaml
+# Kept byte-for-byte as agreed in BTWL-42; prettier would add blank lines under each heading.
+.github/PULL_REQUEST_TEMPLATE.md
