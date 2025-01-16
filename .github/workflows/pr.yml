@@ -1,0 +1,16 @@
+# PR checks for this repo, through the same reusable workflows every other repo calls.
+# The scripts come from the PR's own head commit, so a change to a check is tested by itself.
+name: pr
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-check:
+    uses: ./.github/workflows/pr-check.yml
+    with:
+      shared-ci-ref: ${{ github.event.pull_request.head.sha }}
