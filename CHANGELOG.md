@@ -9,3 +9,5 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 ### Added
 
 - Repo scaffold: Makefile gate targets, prettier, `tsc` over the scripts, `node:test` with JUnit output.
+- Org pull request template and `CODEOWNERS.template` with a default owner per squad (BTWL-42).
+- Reusable `pr-check.yml`: branch, title and Jira link must carry the same `BTWL-<n>` key (BTWL-42).
