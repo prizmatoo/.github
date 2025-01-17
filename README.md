@@ -42,10 +42,10 @@ squad's line, add finer rules below it.
 
 Fails the PR when it does not follow the traceability rules:
 
-| what   | rule                                                                  |
-| ------ | --------------------------------------------------------------------- |
-| branch | `BTWL-<n>`; `BTWL-<n>-2`, `-3` … for follow-up PRs on the same issue  |
-| title  | `[BTWL-<n>] <Jira summary>`, same key as the branch                   |
+| what   | rule                                                                 |
+| ------ | -------------------------------------------------------------------- |
+| branch | `BTWL-<n>`; `BTWL-<n>-2`, `-3` … for follow-up PRs on the same issue |
+| title  | `[BTWL-<n>] <Jira summary>`, same key as the branch                  |
 | body   | contains `https://prizmato.atlassian.net/browse/BTWL-<n>` (same key) |
 
 It reports as a failing check only. It never comments or reviews: no bot output on BTWL repos.

@@ -64,7 +64,10 @@ describe('workflows', () => {
         const text = readFileSync(join(ROOT, '.github', 'workflows', file), 'utf8');
         assert.doesNotMatch(text, /gh (pr|issue) (comment|review)/);
         assert.doesNotMatch(text, /\/comments\b|\/reviews\b|createComment|createReview/);
-        assert.doesNotMatch(text, /github-script|create-or-update-comment|sticky-pull-request-comment/);
+        assert.doesNotMatch(
+          text,
+          /github-script|create-or-update-comment|sticky-pull-request-comment/,
+        );
       });
 
       if (isReusable(wf)) {
@@ -107,7 +110,14 @@ describe('PULL_REQUEST_TEMPLATE.md', () => {
   });
 
   it('lists the six PR types', () => {
-    for (const type of ['Bug Fix', 'Improvement', 'Feature', 'Documentation', 'Hot Fix', 'Refactoring']) {
+    for (const type of [
+      'Bug Fix',
+      'Improvement',
+      'Feature',
+      'Documentation',
+      'Hot Fix',
+      'Refactoring',
+    ]) {
       assert.match(template, new RegExp(`^- \\[ \\] ${type}$`, 'm'));
     }
   });
