@@ -1,0 +1,17 @@
+{
+  "name": "btwl-shared-ci",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Org-wide reusable CI workflows, PR template and PR checks for prizmatoo",
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.5",
+    "prettier": "3.4.2",
+    "typescript": "5.7.3",
+    "yaml": "2.7.0"
+  }
+}
