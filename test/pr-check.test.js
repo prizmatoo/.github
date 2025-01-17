@@ -39,7 +39,9 @@ describe('checkPullRequest', () => {
 
   it('rejects a body without the Jira link', () => {
     const problems = checkPullRequest({ ...ok, body: 'fixes the thing' });
-    assert.deepEqual(problems, ['body must link the Jira issue: https://prizmato.atlassian.net/browse/BTWL-118']);
+    assert.deepEqual(problems, [
+      'body must link the Jira issue: https://prizmato.atlassian.net/browse/BTWL-118',
+    ]);
   });
 
   it('rejects the untouched template placeholder', () => {
