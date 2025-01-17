@@ -38,6 +38,48 @@ squad's line, add finer rules below it.
 
 ## Workflows
 
+All workflows here are reusable (`on: workflow_call`). Repos call them with `@main`; there is
+nothing to copy. Every workflow keeps `GITHUB_TOKEN` read-only and reports through checks only.
+
+### `ci-node.yml`
+
+CI for the TypeScript repos. Steps: checkout, pnpm (`pnpm/action-setup` reads `packageManager`
+from `package.json`), Node from `.nvmrc`, `make setup`, `make ci`, then the coverage directory is
+uploaded as the artifact `coverage-<repo>-<sha>`.
+
+```yaml
+# .github/workflows/ci.yml
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  ci:
+    uses: prizmatoo/.github/.github/workflows/ci-node.yml@main
+```
+
+| input               | default    | meaning                                              |
+| ------------------- | ---------- | ---------------------------------------------------- |
+| `working-directory` | `.`        | where `package.json`, `.nvmrc` and the Makefile live |
+| `coverage-path`     | `coverage` | coverage output uploaded as an artifact              |
+
+**Repo owner checklist** (from the pnpm vs npm spike, BTWL-38):
+
+- [ ] `"packageManager": "pnpm@9.15.4"` in `package.json`, and `pnpm-lock.yaml` committed
+- [ ] `make setup` is `pnpm install --frozen-lockfile`
+- [ ] `.nvmrc` contains `22`
+- [ ] Makefile has `setup lint typecheck test build ci`; `make ci` passes locally in under 3 minutes
+- [ ] `.github/workflows/ci.yml` calls `ci-node.yml@main` as above
+
+### `ci-python.yml`
+
+Same shape for the Python repos: checkout, `astral-sh/setup-uv` (with its uv cache), Python from
+`.python-version`, `make setup` (`uv sync --frozen`), `make ci`. Default `coverage-path` is
+`coverage.json` (`pytest --cov --cov-report=json`). Call it like `ci-node.yml`.
+
 ### `pr-check.yml`
 
 Fails the PR when it does not follow the traceability rules:

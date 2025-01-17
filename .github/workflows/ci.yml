@@ -1,0 +1,14 @@
+# CI for this repo: the same reusable workflow the TypeScript repos call, from the local copy.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci-node.yml
