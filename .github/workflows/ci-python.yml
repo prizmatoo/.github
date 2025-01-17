@@ -1,0 +1,56 @@
+# Reusable CI for BTWL Python repos, same shape as ci-node.yml:
+# make setup (uv sync --frozen), then make ci (ruff, mypy, pytest --cov, uv build).
+# No Python repo calls it yet; it is here so the first one does not need its own CI.
+name: ci-python
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory with pyproject.toml, uv.lock, .python-version and the Makefile
+        type: string
+        default: .
+      coverage-path:
+        description: Coverage output to upload as an artifact, relative to working-directory
+        type: string
+        default: coverage.json
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: make ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v5.2.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: ${{ inputs.working-directory }}/uv.lock
+
+      # Python version comes from the repo's .python-version.
+      - name: Install Python
+        run: uv python install
+
+      - name: make setup
+        run: make setup
+
+      - name: make ci
+        run: make ci
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: coverage-${{ github.event.repository.name }}-${{ github.sha }}
+          path: ${{ inputs.working-directory }}/${{ inputs.coverage-path }}
+          if-no-files-found: warn
+          retention-days: 14
