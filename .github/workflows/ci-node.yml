@@ -1,0 +1,56 @@
+# Reusable CI for BTWL TypeScript repos.
+# Same steps everywhere: make setup, then make ci (lint, typecheck, test, build).
+# The repo's Makefile owns the details; this workflow only provides the toolchain.
+name: ci-node
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory with package.json, .nvmrc and the Makefile
+        type: string
+        default: .
+      coverage-path:
+        description: Coverage output to upload as an artifact, relative to working-directory
+        type: string
+        default: coverage
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: make ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+
+      # No version input on purpose: the action reads "packageManager" from package.json.
+      - uses: pnpm/action-setup@v4.0.0
+        with:
+          package_json_file: ${{ inputs.working-directory }}/package.json
+
+      - uses: actions/setup-node@v4.1.0
+        with:
+          node-version-file: ${{ inputs.working-directory }}/.nvmrc
+
+      - name: make setup
+        run: make setup
+
+      - name: make ci
+        run: make ci
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: coverage-${{ github.event.repository.name }}-${{ github.sha }}
+          path: ${{ inputs.working-directory }}/${{ inputs.coverage-path }}
+          if-no-files-found: warn
+          retention-days: 14
