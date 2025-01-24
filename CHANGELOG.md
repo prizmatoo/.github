@@ -13,3 +13,5 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - Reusable `pr-check.yml`: branch, title and Jira link must carry the same `BTWL-<n>` key (BTWL-42).
 - Reusable `ci-node.yml` (pnpm from `packageManager`, Node from `.nvmrc`, `make setup` + `make ci`,
   coverage artifact) and its Python counterpart `ci-python.yml` (BTWL-37).
+- Reusable `gitleaks.yml`: scans the PR's commits with gitleaks 8.23.1, honours the repo's
+  `.gitleaks.toml`, annotates findings on file and line (BTWL-39).
