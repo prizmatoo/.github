@@ -109,3 +109,29 @@ jobs:
 The check scripts live in `scripts/` of this repo; the workflow checks them out next to the
 caller's code. `prizmatoo/.github` is private, so if `GITHUB_TOKEN` cannot read it, pass a
 read-only token as the `shared-ci-token` secret.
+
+### `gitleaks.yml`
+
+Secrets scan over the commits of the PR (base..head), or of the push. Runs the pinned gitleaks
+release binary (input `gitleaks-version`, checked against the release checksums) and fails with an
+annotation on each file and line that matches. Findings are redacted in the log.
+
+The repo's own `.gitleaks.toml` is authoritative. A documented fixture that looks like a secret
+gets an allowlist entry there, with a comment saying what it is:
+
+```toml
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented test fixtures"
+# Static test key pair used by the JWT tests; not used anywhere else.
+paths = ['''test/fixtures/keys/.*''']
+```
+
+Add it next to `pr-check` in the repo's `pr.yml`:
+
+```yaml
+gitleaks:
+  uses: prizmatoo/.github/.github/workflows/gitleaks.yml@main
+```
