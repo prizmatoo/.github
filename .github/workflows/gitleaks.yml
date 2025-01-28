@@ -1,0 +1,79 @@
+# Reusable secrets scan: gitleaks over the commits of the PR (or of the push).
+# The calling repo's .gitleaks.toml is authoritative: allowlists live there, each with a comment.
+# gitleaks runs as the pinned release binary, verified against the release checksums.
+name: gitleaks
+
+on:
+  workflow_call:
+    inputs:
+      gitleaks-version:
+        description: gitleaks release to run
+        type: string
+        default: 8.23.1
+      shared-ci-ref:
+        description: Ref of prizmatoo/.github whose scripts annotate the findings
+        type: string
+        default: main
+    secrets:
+      shared-ci-token:
+        description: Read-only token for prizmatoo/.github (private repo); falls back to GITHUB_TOKEN
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: secrets scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out shared CI scripts
+        uses: actions/checkout@v4.2.2
+        with:
+          repository: prizmatoo/.github
+          ref: ${{ inputs.shared-ci-ref }}
+          path: .shared-ci
+          token: ${{ secrets.shared-ci-token || github.token }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4.1.0
+        with:
+          node-version: 22
+
+      - name: Install gitleaks
+        env:
+          VERSION: ${{ inputs.gitleaks-version }}
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}"
+          tarball="gitleaks_${VERSION}_linux_x64.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl -sSfL -o "$tarball" "$base/$tarball"
+          curl -sSfL -o checksums.txt "$base/gitleaks_${VERSION}_checksums.txt"
+          grep " ${tarball}\$" checksums.txt | sha256sum -c -
+          tar -xzf "$tarball" gitleaks
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Scan commits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            range="$BASE_SHA..HEAD"
+          elif [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            range="$BEFORE_SHA..HEAD"
+          else
+            range="-1"
+          fi
+          config=()
+          if [ -f .gitleaks.toml ]; then config=(--config .gitleaks.toml); fi
+          gitleaks git --log-opts="$range" "${config[@]}" --redact --no-banner \
+            --report-format json --report-path "$RUNNER_TEMP/gitleaks.json" --exit-code 0 .
+          # Fails the job and annotates each finding on its file and line.
+          node .shared-ci/scripts/gitleaks-annotate.js "$RUNNER_TEMP/gitleaks.json"
