@@ -1,6 +1,6 @@
 # Reusable CI for BTWL Python repos, same shape as ci-node.yml:
-# make setup (uv sync --frozen), then make ci (ruff, mypy, pytest --cov, uv build).
-# No Python repo calls it yet; it is here so the first one does not need its own CI.
+# make setup (uv sync --frozen), then make ci (ruff, mypy, pytest --cov, uv build), then the
+# coverage floor. No Python repo calls it yet; it is here so the first one does not need its own CI.
 name: ci-python
 
 on:
@@ -14,6 +14,22 @@ on:
         description: Coverage output to upload as an artifact, relative to working-directory
         type: string
         default: coverage.json
+      coverage-summary:
+        description: Coverage summary read by the floor check (pytest --cov-report=json)
+        type: string
+        default: coverage.json
+      coverage-floor:
+        description: Minimum total line coverage in percent
+        type: number
+        default: 80
+      shared-ci-ref:
+        description: Ref of prizmatoo/.github whose scripts run the coverage check
+        type: string
+        default: main
+    secrets:
+      shared-ci-token:
+        description: Read-only token for prizmatoo/.github (private repo); falls back to GITHUB_TOKEN
+        required: false
 
 permissions:
   contents: read
@@ -45,6 +61,26 @@ jobs:
 
       - name: make ci
         run: make ci
+
+      # The floor check is the same Node script ci-node runs.
+      - name: Check out shared CI scripts
+        uses: actions/checkout@v4.2.2
+        with:
+          repository: prizmatoo/.github
+          ref: ${{ inputs.shared-ci-ref }}
+          path: .shared-ci
+          token: ${{ secrets.shared-ci-token || github.token }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4.1.0
+        with:
+          node-version: 22
+
+      - name: Coverage floor
+        env:
+          SUMMARY: ${{ inputs.coverage-summary }}
+          FLOOR: ${{ inputs.coverage-floor }}
+        run: node "$GITHUB_WORKSPACE/.shared-ci/scripts/coverage-floor.js" "$SUMMARY" --floor "$FLOOR"
 
       - name: Upload coverage
         if: always()
