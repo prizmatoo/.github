@@ -43,6 +43,18 @@ describe('ci-node.yml', () => {
     assert.equal(upload.if, 'always()');
   });
 
+  it('checks the coverage floor after make ci, 80% by default', () => {
+    const floor = steps.findIndex((s) => s.name === 'Coverage floor');
+    assert.ok(floor > runIndex('make ci'), 'coverage floor must run after make ci');
+    assert.match(steps[floor].run ?? '', /scripts\/coverage-floor\.js/);
+    assert.equal(wf.on.workflow_call.inputs['coverage-floor'].default, 80);
+  });
+
+  it('checks out the shared scripts only after make ci', () => {
+    const shared = steps.findIndex((s) => s.with?.repository === 'prizmatoo/.github');
+    assert.ok(shared > runIndex('make ci'));
+  });
+
   it('does not keep the checkout credentials around', () => {
     const checkout = usesStep('actions/checkout@');
     assert.equal(checkout?.with?.['persist-credentials'], false);

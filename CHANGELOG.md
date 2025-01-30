@@ -15,3 +15,5 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   coverage artifact) and its Python counterpart `ci-python.yml` (BTWL-37).
 - Reusable `gitleaks.yml`: scans the PR's commits with gitleaks 8.23.1, honours the repo's
   `.gitleaks.toml`, annotates findings on file and line (BTWL-39).
+- Coverage floor in `ci-node.yml` and `ci-python.yml`: fails below 80% total line coverage and
+  prints the per-file summary (inputs `coverage-floor`, `coverage-summary`) (BTWL-46).
