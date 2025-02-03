@@ -7,6 +7,7 @@
 // <summary> is one of
 //   - istanbul json-summary (vitest / jest "json-summary" reporter): coverage/coverage-summary.json
 //   - coverage.py JSON (pytest --cov-report=json): coverage.json
+//   - lcov (any tool; node --test --test-reporter=lcov): *.info
 import { existsSync, readFileSync } from 'node:fs';
 
 import { errorCommand, isMain } from './lib/actions.js';
@@ -21,12 +22,33 @@ import { errorCommand, isMain } from './lib/actions.js';
  * @returns {Summary}
  */
 export function readSummary(text) {
+  if (/^(TN|SF):/m.test(text) && text.includes('end_of_record')) return fromLcov(text);
   const data = JSON.parse(text);
   if (data?.total?.lines) return fromIstanbul(data);
   if (data?.totals && typeof data.totals.percent_covered === 'number') return fromCoveragePy(data);
   throw new Error(
-    'unrecognised coverage summary (expected istanbul json-summary or coverage.py JSON)',
+    'unrecognised coverage summary (expected istanbul json-summary, coverage.py JSON or lcov)',
   );
+}
+
+/**
+ * lcov: one record per source file, LF = lines found, LH = lines hit.
+ * @param {string} text
+ * @returns {Summary}
+ */
+function fromLcov(text) {
+  /** @type {FileCoverage[]} */
+  const files = [];
+  for (const record of text.split('end_of_record')) {
+    const file = /^SF:(.+)$/m.exec(record)?.[1];
+    if (!file) continue;
+    const total = Number(/^LF:(\d+)$/m.exec(record)?.[1] ?? 0);
+    const covered = Number(/^LH:(\d+)$/m.exec(record)?.[1] ?? 0);
+    files.push({ file, total, covered, pct: total ? (covered / total) * 100 : 100 });
+  }
+  const total = files.reduce((n, f) => n + f.total, 0);
+  const covered = files.reduce((n, f) => n + f.covered, 0);
+  return { format: 'lcov', pct: total ? (covered / total) * 100 : 100, files };
 }
 
 /**

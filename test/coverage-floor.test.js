@@ -59,6 +59,32 @@ describe('readSummary', () => {
     assert.equal(s.files.length, 2);
   });
 
+  it('reads lcov and totals LH/LF over all files', () => {
+    const lcov = [
+      'TN:',
+      'SF:scripts/pr-check.js',
+      'LF:60',
+      'LH:60',
+      'end_of_record',
+      'TN:',
+      'SF:scripts/coverage-floor.js',
+      'LF:40',
+      'LH:30',
+      'end_of_record',
+      '',
+    ].join('\n');
+    const s = readSummary(lcov);
+    assert.equal(s.format, 'lcov');
+    assert.equal(s.pct, 90);
+    assert.deepEqual(
+      s.files.map((f) => [f.file, f.pct]),
+      [
+        ['scripts/pr-check.js', 100],
+        ['scripts/coverage-floor.js', 75],
+      ],
+    );
+  });
+
   it('rejects anything else', () => {
     assert.throws(() => readSummary('{"hello": 1}'), /unrecognised coverage summary/);
   });
