@@ -61,10 +61,31 @@ jobs:
     uses: prizmatoo/.github/.github/workflows/ci-node.yml@main
 ```
 
-| input               | default    | meaning                                              |
-| ------------------- | ---------- | ---------------------------------------------------- |
-| `working-directory` | `.`        | where `package.json`, `.nvmrc` and the Makefile live |
-| `coverage-path`     | `coverage` | coverage output uploaded as an artifact              |
+| input               | default                          | meaning                                              |
+| ------------------- | -------------------------------- | ---------------------------------------------------- |
+| `working-directory` | `.`                              | where `package.json`, `.nvmrc` and the Makefile live |
+| `coverage-path`     | `coverage`                       | coverage output uploaded as an artifact              |
+| `coverage-summary`  | `coverage/coverage-summary.json` | summary the coverage floor reads                     |
+| `coverage-floor`    | `80`                             | minimum total line coverage, percent                 |
+
+**Coverage floor.** After `make ci`, `scripts/coverage-floor.js` reads the coverage summary and
+fails the job when total line coverage is below the floor, printing the per-file summary (lowest
+first). Vitest and Jest need the `json-summary` reporter for that file:
+
+```ts
+// vitest.config.ts
+test: { coverage: { provider: 'v8', reporter: ['text', 'json-summary', 'lcov'] } }
+// jest.config.js
+coverageReporters: ['text', 'json-summary', 'lcov']
+```
+
+A missing summary fails the job too. A repo with no tests yet sets `coverage-floor: 0`, which
+turns the check off visibly in its `ci.yml` instead of passing silently. The comparison uses the
+unrounded percentage: 79.95% fails.
+
+Generated code (OpenAPI clients and the like) should not count: exclude it in the repo's test
+config (`coverage.exclude` in Vitest, `coveragePathIgnorePatterns` in Jest), not by lowering the
+floor.
 
 **Repo owner checklist** (from the pnpm vs npm spike, BTWL-38):
 
@@ -77,8 +98,9 @@ jobs:
 ### `ci-python.yml`
 
 Same shape for the Python repos: checkout, `astral-sh/setup-uv` (with its uv cache), Python from
-`.python-version`, `make setup` (`uv sync --frozen`), `make ci`. Default `coverage-path` is
-`coverage.json` (`pytest --cov --cov-report=json`). Call it like `ci-node.yml`.
+`.python-version`, `make setup` (`uv sync --frozen`), `make ci`, coverage floor. Same inputs as
+`ci-node.yml`; `coverage-path` and `coverage-summary` default to `coverage.json`
+(`pytest --cov --cov-report=json`).
 
 ### `pr-check.yml`
 

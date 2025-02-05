@@ -12,3 +12,7 @@ permissions:
 jobs:
   ci:
     uses: ./.github/workflows/ci-node.yml
+    with:
+      # node --test writes lcov, not istanbul json-summary.
+      coverage-summary: coverage/lcov.info
+      shared-ci-ref: ${{ github.event.pull_request.head.sha || github.sha }}
