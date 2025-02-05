@@ -79,6 +79,10 @@ test: { coverage: { provider: 'v8', reporter: ['text', 'json-summary', 'lcov'] }
 coverageReporters: ['text', 'json-summary', 'lcov']
 ```
 
+A missing summary fails the job too. A repo with no tests yet sets `coverage-floor: 0`, which
+turns the check off visibly in its `ci.yml` instead of passing silently. The comparison uses the
+unrounded percentage: 79.95% fails.
+
 Generated code (OpenAPI clients and the like) should not count: exclude it in the repo's test
 config (`coverage.exclude` in Vitest, `coveragePathIgnorePatterns` in Jest), not by lowering the
 floor.
