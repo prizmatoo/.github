@@ -19,7 +19,7 @@ on:
         type: string
         default: coverage.json
       coverage-floor:
-        description: Minimum total line coverage in percent
+        description: Minimum total line coverage in percent; 0 turns the check off
         type: number
         default: 80
       shared-ci-ref:
