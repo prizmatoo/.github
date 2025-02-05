@@ -100,8 +100,9 @@ export function formatTable(files) {
  * @param {number} floor
  */
 export function evaluate(summary, floor) {
-  const pct = Number(summary.pct.toFixed(1));
-  return { ok: pct >= floor, pct };
+  // Compare the unrounded value: 79.95% must not pass as "80.0%". Round only for display,
+  // and round down so the log never shows the floor for a run that failed it.
+  return { ok: summary.pct >= floor, pct: Math.floor(summary.pct * 100) / 100 };
 }
 
 /**
@@ -116,9 +117,14 @@ export function main(argv = process.argv.slice(2)) {
     console.error('usage: coverage-floor.js <summary> [--floor 80]');
     return 2;
   }
-  if (!existsSync(path)) {
-    console.log(`::warning title=coverage::no coverage summary at ${path}, floor not checked`);
+  if (floor === 0) {
+    console.log('coverage: floor disabled (coverage-floor: 0)');
     return 0;
+  }
+  if (!existsSync(path)) {
+    const hint = 'enable the json-summary coverage reporter, or set coverage-floor: 0 explicitly';
+    console.log(errorCommand(`no coverage summary at ${path}: ${hint}`, { title: 'coverage' }));
+    return 1;
   }
   const summary = readSummary(readFileSync(path, 'utf8'));
   const { ok, pct } = evaluate(summary, floor);
