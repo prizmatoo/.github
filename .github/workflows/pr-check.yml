@@ -1,5 +1,6 @@
-# Reusable PR check: branch, title and Jira link follow the traceability rules
-# (branch BTWL-<n>, title "[BTWL-<n>] <summary>", body links the issue).
+# Reusable PR checks:
+#   traceability     branch BTWL-<n>, title "[BTWL-<n>] <summary>", body links the issue
+#   regression-test  a bug fix that changes src/ also adds or changes a test
 #
 # Reports a failing check only. It never comments or reviews: no bot output on BTWL repos.
 # Call it from the repo's own pull_request workflow, see README.md.
@@ -47,3 +48,40 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
         run: node .shared-ci/scripts/pr-check.js
+
+  # Bug-fix PRs (Bug Fix ticked, or the bug label) that change src/ must touch test/ or tests/.
+  regression-test:
+    name: regression test for bug fixes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out shared CI scripts
+        uses: actions/checkout@v4.2.2
+        with:
+          repository: prizmatoo/.github
+          ref: ${{ inputs.shared-ci-ref }}
+          path: .shared-ci
+          token: ${{ secrets.shared-ci-token || github.token }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4.1.0
+        with:
+          node-version: 22
+
+      - name: List changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --name-only "$BASE_SHA...$HEAD_SHA" | tee "$RUNNER_TEMP/changed-files.txt"
+
+      - name: Bug fixes need a regression test
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: node .shared-ci/scripts/regression-test.js "$RUNNER_TEMP/changed-files.txt"
