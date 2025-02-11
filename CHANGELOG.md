@@ -17,3 +17,5 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   `.gitleaks.toml`, annotates findings on file and line (BTWL-39).
 - Coverage floor in `ci-node.yml` and `ci-python.yml`: fails below 80% total line coverage and
   prints the per-file summary (inputs `coverage-floor`, `coverage-summary`) (BTWL-46).
+- `regression-test` job in `pr-check.yml`: a bug-fix PR that changes `src/` without touching
+  `test/` or `tests/` fails with "bug fixes need a regression test" (BTWL-50).
