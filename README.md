@@ -114,9 +114,10 @@ Two jobs, both reported as checks on the PR.
 | title  | `[BTWL-<n>] <Jira summary>`, same key as the branch                  |
 | body   | contains `https://prizmato.atlassian.net/browse/BTWL-<n>` (same key) |
 
-**`regression-test`** makes every bug fix come with a test. A PR is a bug fix when "Bug Fix" is
-ticked in the PR template or it has the `bug` label. If such a PR changes anything under `src/`
-and nothing under `test/` or `tests/`, the check fails with "bug fixes need a regression test".
+**`regression-test`** makes every bug fix come with a test. A PR is a bug fix when "Bug Fix" or
+"Hot Fix" is ticked in the PR template, or it has the `bug` or `hotfix` label. If such a PR changes
+anything under `src/` and nothing in a `test/`, `tests/` or `__tests__/` directory, the check fails
+with "bug fixes need a regression test".
 PRs for stories, tasks and spikes (another type ticked) are skipped. The Jira issue type is not
 looked up, because that would need a Jira token in Actions; tick the box.
 

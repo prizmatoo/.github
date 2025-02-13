@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // regression-test: a bug-fix PR that changes src/ must also add or change a test.
 //
-// A PR is a bug fix when "Bug Fix" is ticked in the PR template, or it carries the `bug` label.
+// A PR is a bug fix when "Bug Fix" or "Hot Fix" is ticked in the PR template, or it carries the
+// `bug` or `hotfix` label.
 // Stories, tasks and spikes (nothing ticked) are skipped. The Jira issue type is not looked up:
 // that would need a Jira token in Actions, and CI here only reads GitHub.
 //
@@ -14,13 +15,16 @@ import { errorCommand, isMain } from './lib/actions.js';
 
 export const MESSAGE = 'bug fixes need a regression test';
 
-const BUG_FIX_RE = /^\s*- \[x\] Bug Fix\b/m;
+// GitHub renders "- [x]" and "- [X]" (and "*" bullets) as the same ticked box.
+const BUG_FIX_RE = /^\s*[-*] \[[xX]\] (?:Bug Fix|Hot Fix)\s*$/m;
+const BUG_LABELS = ['bug', 'hotfix'];
+const TEST_DIRS = new Set(['test', 'tests', '__tests__']);
 
 /**
  * @param {{ body: string, labels: string[] }} pr
  */
 export function isBugFix({ body, labels }) {
-  return BUG_FIX_RE.test(body) || labels.includes('bug');
+  return BUG_FIX_RE.test(body) || labels.some((l) => BUG_LABELS.includes(l));
 }
 
 /** @param {string} file */
@@ -30,7 +34,11 @@ export function isSourceChange(file) {
 
 /** @param {string} file */
 export function isTestChange(file) {
-  return file.startsWith('test/') || file.startsWith('tests/') || file.includes('/test');
+  // A directory named test/, tests/ or __tests__ anywhere in the path; not "src/testdata.ts".
+  return file
+    .split('/')
+    .slice(0, -1)
+    .some((dir) => TEST_DIRS.has(dir));
 }
 
 /**
@@ -39,7 +47,10 @@ export function isTestChange(file) {
  */
 export function evaluate({ files, body, labels }) {
   if (!isBugFix({ body, labels })) {
-    return { result: 'skip', reason: 'not a bug fix (tick "Bug Fix" in the PR template if it is)' };
+    return {
+      result: 'skip',
+      reason: 'not a bug fix (tick "Bug Fix" or "Hot Fix" in the PR template if it is)',
+    };
   }
   if (!files.some(isSourceChange)) return { result: 'pass', reason: 'no change under src/' };
   if (files.some(isTestChange)) return { result: 'pass', reason: 'a test was added or changed' };
