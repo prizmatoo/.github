@@ -104,7 +104,9 @@ Same shape for the Python repos: checkout, `astral-sh/setup-uv` (with its uv cac
 
 ### `pr-check.yml`
 
-Fails the PR when it does not follow the traceability rules:
+Two jobs, both reported as checks on the PR.
+
+**`traceability`** fails the PR when it does not follow the traceability rules:
 
 | what   | rule                                                                 |
 | ------ | -------------------------------------------------------------------- |
@@ -112,15 +114,22 @@ Fails the PR when it does not follow the traceability rules:
 | title  | `[BTWL-<n>] <Jira summary>`, same key as the branch                  |
 | body   | contains `https://prizmato.atlassian.net/browse/BTWL-<n>` (same key) |
 
-It reports as a failing check only. It never comments or reviews: no bot output on BTWL repos.
-Call it from the repo (runs again when the title or body is edited):
+**`regression-test`** makes every bug fix come with a test. A PR is a bug fix when "Bug Fix" or
+"Hot Fix" is ticked in the PR template, or it has the `bug` or `hotfix` label. If such a PR changes
+anything under `src/` and nothing in a `test/`, `tests/` or `__tests__/` directory, the check fails
+with "bug fixes need a regression test".
+PRs for stories, tasks and spikes (another type ticked) are skipped. The Jira issue type is not
+looked up, because that would need a Jira token in Actions; tick the box.
+
+Both jobs report as failing checks only. They never comment or review: no bot output on BTWL
+repos. Call the workflow from the repo; it runs again when the title, body or labels change:
 
 ```yaml
 # .github/workflows/pr.yml
 name: pr
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 permissions:
   contents: read
 jobs:

@@ -91,6 +91,17 @@ describe('pr-check.yml', () => {
   it('runs scripts/pr-check.js', () => {
     assert.ok(allSteps(wf).some((s) => s.run?.includes('scripts/pr-check.js')));
   });
+
+  it('has a regression-test job that diffs the whole PR against its base', () => {
+    const job = wf.jobs['regression-test'];
+    assert.ok(job, 'regression-test job missing');
+    const steps = job.steps ?? [];
+    assert.equal(steps[0].with?.['fetch-depth'], 0);
+    const diff = steps.find((s) => s.name === 'List changed files');
+    assert.match(diff?.run ?? '', /git diff --name-only "\$BASE_SHA\.\.\.\$HEAD_SHA"/);
+    const check = steps.find((s) => s.run?.includes('scripts/regression-test.js'));
+    assert.ok(check?.env?.PR_BODY && check.env.PR_LABELS, 'PR body and labels come through env');
+  });
 });
 
 describe('PULL_REQUEST_TEMPLATE.md', () => {
