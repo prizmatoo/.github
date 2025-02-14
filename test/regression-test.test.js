@@ -4,7 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { MESSAGE, evaluate, isBugFix, main, parseLabels } from '../scripts/regression-test.js';
+import {
+  MESSAGE,
+  evaluate,
+  isBugFix,
+  isTestChange,
+  main,
+  parseLabels,
+} from '../scripts/regression-test.js';
 
 /** PR body from the org template with the given types ticked. */
 function body(/** @type {string[]} */ ...ticked) {
@@ -37,6 +44,48 @@ describe('isBugFix', () => {
   it('is false for the untouched template', () => {
     assert.equal(isBugFix({ body: body(), labels: [] }), false);
   });
+
+  it('is true when Hot Fix is ticked', () => {
+    assert.equal(isBugFix({ body: body('Hot Fix'), labels: [] }), true);
+  });
+
+  it('is true with the hotfix label', () => {
+    assert.equal(isBugFix({ body: body(), labels: ['hotfix'] }), true);
+  });
+
+  it('accepts an upper-case [X], which GitHub renders as ticked too', () => {
+    assert.equal(isBugFix({ body: body('Bug Fix').replace('[x]', '[X]'), labels: [] }), true);
+  });
+
+  it('accepts "*" bullets', () => {
+    assert.equal(isBugFix({ body: '* [x] Bug Fix\n', labels: [] }), true);
+  });
+
+  it('does not read "Bug Fix" in prose as ticked', () => {
+    const prose = body('Refactoring') + '\nNot a - [x] Bug Fix, just moving code.';
+    assert.equal(isBugFix({ body: prose, labels: [] }), false);
+  });
+});
+
+describe('isTestChange', () => {
+  for (const file of [
+    'test/dim/weight.test.ts',
+    'tests/test_stock.py',
+    'packages/client/test/orders.test.ts',
+    'src/orders/__tests__/service.test.ts',
+  ]) {
+    it(`counts ${file}`, () => assert.equal(isTestChange(file), true));
+  }
+
+  for (const file of [
+    'src/orders/testdata.ts',
+    'src/test-helpers.ts',
+    'src/testing/clock.ts',
+    'test',
+    'docs/testing.md',
+  ]) {
+    it(`does not count ${file}`, () => assert.equal(isTestChange(file), false));
+  }
 });
 
 describe('evaluate', () => {
@@ -59,6 +108,11 @@ describe('evaluate', () => {
   it('passes a bug fix outside src/ (config, docs)', () => {
     const files = ['docker-compose.yml', 'README.md'];
     assert.equal(evaluate({ files, body: body('Bug Fix'), labels: [] }).result, 'pass');
+  });
+
+  it('fails a bug fix whose only "test-looking" change is src/**/testdata', () => {
+    const files = ['src/dim/weight.ts', 'src/dim/testdata.ts'];
+    assert.equal(evaluate({ files, body: body('Bug Fix'), labels: [] }).result, 'fail');
   });
 
   it('skips stories, tasks and spikes', () => {
