@@ -37,6 +37,15 @@ describe('ci-node.yml', () => {
     assert.ok(pnpm < node);
   });
 
+  it('restores the pnpm store before make setup, keyed on the lockfile', () => {
+    const cache = steps.findIndex((s) => s.uses?.startsWith('actions/cache@'));
+    assert.ok(cache >= 0, 'actions/cache step missing');
+    assert.ok(cache < runIndex('make setup'), 'cache must be restored before make setup');
+    const { path, key } = /** @type {{ path: string, key: string }} */ (steps[cache].with);
+    assert.equal(path, '${{ steps.pnpm-store.outputs.path }}');
+    assert.match(key, /hashFiles\(.*pnpm-lock\.yaml/);
+  });
+
   it('uploads coverage even when make ci fails', () => {
     const upload = steps.find((s) => s.name === 'Upload coverage');
     assert.ok(upload, 'coverage upload missing');
