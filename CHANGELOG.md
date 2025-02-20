@@ -19,3 +19,4 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   prints the per-file summary (inputs `coverage-floor`, `coverage-summary`) (BTWL-46).
 - `regression-test` job in `pr-check.yml`: a bug-fix PR that changes `src/` without touching
   `test/` or `tests/` fails with "bug fixes need a regression test" (BTWL-50).
+- pnpm store cache in `ci-node.yml`, keyed on `pnpm-lock.yaml` (BTWL-65).
