@@ -44,8 +44,12 @@ nothing to copy. Every workflow keeps `GITHUB_TOKEN` read-only and reports throu
 ### `ci-node.yml`
 
 CI for the TypeScript repos. Steps: checkout, pnpm (`pnpm/action-setup` reads `packageManager`
-from `package.json`), Node from `.nvmrc`, `make setup`, `make ci`, then the coverage directory is
-uploaded as the artifact `coverage-<repo>-<sha>`.
+from `package.json`), Node from `.nvmrc`, pnpm store cache, `make setup`, `make ci`, coverage
+floor, then the coverage directory is uploaded as the artifact `coverage-<repo>-<sha>`.
+
+The pnpm store is cached with `actions/cache`, keyed on the OS and the hash of `pnpm-lock.yaml`,
+falling back to the newest store for the OS. In the BTWL-38 spike this took installs from 94s
+(cold) to 21s (warm). A lockfile change misses the exact key once; the next run is warm again.
 
 ```yaml
 # .github/workflows/ci.yml
