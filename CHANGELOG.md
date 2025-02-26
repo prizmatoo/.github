@@ -20,3 +20,6 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - `regression-test` job in `pr-check.yml`: a bug-fix PR that changes `src/` without touching
   `test/` or `tests/` fails with "bug fixes need a regression test" (BTWL-50).
 - pnpm store cache in `ci-node.yml`, keyed on `pnpm-lock.yaml` (BTWL-65).
+- Reusable `release.yml`: on a `v*` tag, checks the tag against `package.json`, runs `make ci`,
+  `npm pack`s and uploads the tarball with the CHANGELOG section as release notes. It does not
+  publish; the component lead publishes with their own token (BTWL-60).

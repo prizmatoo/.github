@@ -170,3 +170,32 @@ Add it next to `pr-check` in the repo's `pr.yml`:
 gitleaks:
   uses: prizmatoo/.github/.github/workflows/gitleaks.yml@main
 ```
+
+### `release.yml`
+
+Release build for packages (first user: `@btwl/pricing`). On a `v<semver>` tag it:
+
+1. checks the tag equals `v` + the `version` in `package.json`;
+2. runs `make setup` and `make ci`;
+3. cuts the `## [<version>]` section of `CHANGELOG.md` into `release-notes.md`;
+4. runs `npm pack` and uploads the tarball and `release-notes.md` as the artifact
+   `release-<repo>-<version>`.
+
+**It does not publish and does not create the GitHub release.** No bot writes to BTWL repos, so
+`GITHUB_TOKEN` stays read-only. The component lead publishes the packed tarball to GitHub
+Packages with their own token and creates the GitHub release from `release-notes.md` (OPS page
+"Release process v1"). The build and the tests still run in CI, so what the lead publishes is
+exactly what passed.
+
+```yaml
+# .github/workflows/release.yml
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  release:
+    uses: prizmatoo/.github/.github/workflows/release.yml@main
+```
