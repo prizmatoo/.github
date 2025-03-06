@@ -1,0 +1,62 @@
+# Service catalog v1: one entry per repository in the prizmatoo org.
+#
+# The machine-readable answer to "what is this repo and who owns it". The ENG page
+# "Service catalog" is the prose version; when they disagree, fix both.
+#
+#   owner_team      squad that owns the repo
+#   primary         GitHub login of the Jira component lead (tags and releases)
+#   backup          GitHub login of the component backup (reviews the repo's PRs)
+#   jira_component  Jira component in project BTWL
+#   confluence_*    where the repo is described
+version: 1
+
+repos:
+  - name: .github
+    description: Org-wide reusable CI workflows, PR template, CODEOWNERS template and this catalog
+    owner_team: Platform
+    primary: cei-prizmato
+    backup: gehna-prizmato
+    jira_component: btwl-shared-ci
+    confluence_space: BTWL
+    confluence_page: Engineering standards v1
+    language: YAML (GitHub Actions), JavaScript
+
+  - name: btwl-auth-gateway
+    description: JWT issuance, JWKS, roles and token introspection
+    owner_team: Platform
+    primary: cei-prizmato
+    backup: aaquib-prizmato
+    jira_component: btwl-auth-gateway
+    confluence_space: BTWL
+    confluence_page: Service catalog
+    language: TypeScript (Express, Jest)
+
+  - name: btwl-pricing-lib
+    description: '@btwl/pricing: money, zones, rate cards, DIM weight and rounding'
+    owner_team: Order-to-Cash
+    primary: venkat-prizmato
+    backup: aaquib-prizmato
+    jira_component: btwl-pricing-lib
+    confluence_space: BTWL
+    confluence_page: Service catalog
+    language: TypeScript library (Vitest)
+
+  - name: btwl-order-service
+    description: Customer orders, order lines and quotes via @btwl/pricing
+    owner_team: Order-to-Cash
+    primary: venkat-prizmato
+    backup: krunal-prizmato
+    jira_component: btwl-order-service
+    confluence_space: BTWL
+    confluence_page: Service catalog
+    language: TypeScript (Fastify, Vitest)
+
+  - name: btwl-procurement-api
+    description: Purchase requisitions, approval threshold and the Ledgerline export
+    owner_team: Procurement & Spend
+    primary: shubham-prizmato
+    backup: aaquib-prizmato
+    jira_component: btwl-procurement-api
+    confluence_space: BTWL
+    confluence_page: Service catalog
+    language: TypeScript (Fastify, Vitest)
