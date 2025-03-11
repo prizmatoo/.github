@@ -11,7 +11,8 @@ import { ROOT } from './helpers.js';
 
 /**
  * @typedef {{ name: string, description: string, owner_team: string, primary: string, backup: string,
- *   jira_component: string, confluence_space: string, confluence_page: string, language: string }} Entry
+ *   jira_component: string, confluence_space: string, confluence_page: string, language: string,
+ *   paths: string[] }} Entry
  */
 
 const catalog = /** @type {{ version: number, repos: Entry[] }} */ (
@@ -100,6 +101,14 @@ describe('service-catalog.yaml', () => {
 
       it('points at the BTWL Confluence space', () => {
         assert.equal(entry.confluence_space, 'BTWL');
+      });
+
+      it('lists relative path globs for the component', () => {
+        assert.ok(Array.isArray(entry.paths) && entry.paths.length > 0, 'paths missing');
+        for (const glob of entry.paths) {
+          assert.equal(typeof glob, 'string');
+          assert.doesNotMatch(glob, /^\/|^\.\//, `${glob} must be relative to the repo root`);
+        }
       });
     });
   }

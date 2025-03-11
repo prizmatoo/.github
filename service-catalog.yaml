@@ -8,6 +8,7 @@
 #   backup          GitHub login of the component backup (reviews the repo's PRs)
 #   jira_component  Jira component in project BTWL
 #   confluence_*    where the repo is described
+#   paths           globs, relative to the repo root, of the files that belong to the component
 version: 1
 
 repos:
@@ -20,6 +21,7 @@ repos:
     confluence_space: BTWL
     confluence_page: Engineering standards v1
     language: YAML (GitHub Actions), JavaScript
+    paths: [.github/**, scripts/**, test/**, service-catalog.yaml, CODEOWNERS.template]
 
   - name: btwl-auth-gateway
     description: JWT issuance, JWKS, roles and token introspection
@@ -30,6 +32,7 @@ repos:
     confluence_space: BTWL
     confluence_page: Service catalog
     language: TypeScript (Express, Jest)
+    paths: [src/**, test/**, openapi.yaml, .env.example]
 
   - name: btwl-pricing-lib
     description: '@btwl/pricing: money, zones, rate cards, DIM weight and rounding'
@@ -40,6 +43,7 @@ repos:
     confluence_space: BTWL
     confluence_page: Service catalog
     language: TypeScript library (Vitest)
+    paths: [src/**, test/**, docs/adr/**]
 
   - name: btwl-order-service
     description: Customer orders, order lines and quotes via @btwl/pricing
@@ -50,6 +54,7 @@ repos:
     confluence_space: BTWL
     confluence_page: Service catalog
     language: TypeScript (Fastify, Vitest)
+    paths: [src/**, test/**, openapi.yaml, docs/adr/**]
 
   - name: btwl-procurement-api
     description: Purchase requisitions, approval threshold and the Ledgerline export
@@ -60,3 +65,4 @@ repos:
     confluence_space: BTWL
     confluence_page: Service catalog
     language: TypeScript (Fastify, Vitest)
+    paths: [src/**, test/**, openapi.yaml, docs/adr/**]
