@@ -23,3 +23,5 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - Reusable `release.yml`: on a `v*` tag, checks the tag against `package.json`, runs `make ci`,
   `npm pack`s and uploads the tarball with the CHANGELOG section as release notes. It does not
   publish; the component lead publishes with their own token (BTWL-60).
+- `service-catalog.yaml` v1: one entry per repo with owner team, primary, backup, Jira
+  component, Confluence page, language and path globs; validated in `make test` (BTWL-70).
