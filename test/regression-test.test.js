@@ -10,6 +10,7 @@ import {
   isBugFix,
   isTestChange,
   main,
+  noTestReason,
   parseLabels,
 } from '../scripts/regression-test.js';
 
@@ -118,6 +119,49 @@ describe('evaluate', () => {
   it('skips stories, tasks and spikes', () => {
     const r = evaluate({ files: ['src/dim/weight.ts'], body: body('Feature'), labels: [] });
     assert.equal(r.result, 'skip');
+  });
+});
+
+describe('no-regression-test label', () => {
+  const files = ['src/config/defaults.ts'];
+  const labels = ['bug', 'no-regression-test'];
+
+  it('passes with a reason in the PR body', () => {
+    const b =
+      body('Bug Fix') + '\n\nNo regression test: timeout default only, covered by config schema';
+    const r = evaluate({ files, body: b, labels });
+    assert.deepEqual(r, {
+      result: 'pass',
+      reason: 'no-regression-test: timeout default only, covered by config schema',
+    });
+  });
+
+  it('fails without a reason', () => {
+    const r = evaluate({ files, body: body('Bug Fix'), labels });
+    assert.equal(r.result, 'fail');
+    assert.match(r.reason, /needs a reason/);
+  });
+
+  it('fails with an empty or token reason', () => {
+    for (const line of [
+      'No regression test:',
+      'No regression test: n/a',
+      'No regression test: tbd',
+    ]) {
+      assert.equal(evaluate({ files, body: `${body('Bug Fix')}\n${line}`, labels }).result, 'fail');
+    }
+  });
+
+  it('reads the reason case-insensitively, anywhere in the body', () => {
+    assert.equal(
+      noTestReason('intro\nno regression test:  only the retry count  \n'),
+      'only the retry count',
+    );
+  });
+
+  it('does not need the label when a test was changed anyway', () => {
+    const r = evaluate({ files: [...files, 'test/config.test.ts'], body: body('Bug Fix'), labels });
+    assert.equal(r.result, 'pass');
   });
 });
 

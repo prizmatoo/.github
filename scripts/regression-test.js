@@ -8,17 +8,23 @@
 //
 //   node scripts/regression-test.js <changed-files.txt>
 //
+// A config-only fix can go without a test when the reviewer applies the `no-regression-test`
+// label and the PR body says why, on a line "No regression test: <reason>".
+//
 // Reads PR_BODY and PR_LABELS (JSON array of label names) from the environment.
 import { readFileSync } from 'node:fs';
 
 import { errorCommand, isMain } from './lib/actions.js';
 
 export const MESSAGE = 'bug fixes need a regression test';
+export const NO_TEST_LABEL = 'no-regression-test';
 
 // GitHub renders "- [x]" and "- [X]" (and "*" bullets) as the same ticked box.
 const BUG_FIX_RE = /^\s*[-*] \[[xX]\] (?:Bug Fix|Hot Fix)\s*$/m;
 const BUG_LABELS = ['bug', 'hotfix'];
 const TEST_DIRS = new Set(['test', 'tests', '__tests__']);
+const REASON_RE = /^\s*No regression test:[ \t]*(.*)$/im;
+const MIN_REASON = 10;
 
 /**
  * @param {{ body: string, labels: string[] }} pr
@@ -42,6 +48,14 @@ export function isTestChange(file) {
 }
 
 /**
+ * The reason given for skipping the regression test, if any.
+ * @param {string} body
+ */
+export function noTestReason(body) {
+  return REASON_RE.exec(body)?.[1].trim() ?? '';
+}
+
+/**
  * @param {{ files: string[], body: string, labels: string[] }} pr
  * @returns {{ result: 'skip' | 'pass' | 'fail', reason: string }}
  */
@@ -54,6 +68,14 @@ export function evaluate({ files, body, labels }) {
   }
   if (!files.some(isSourceChange)) return { result: 'pass', reason: 'no change under src/' };
   if (files.some(isTestChange)) return { result: 'pass', reason: 'a test was added or changed' };
+  if (labels.includes(NO_TEST_LABEL)) {
+    const why = noTestReason(body);
+    if (why.length >= MIN_REASON) return { result: 'pass', reason: `${NO_TEST_LABEL}: ${why}` };
+    return {
+      result: 'fail',
+      reason: `${NO_TEST_LABEL} needs a reason: add a line "No regression test: <why>" to the PR body`,
+    };
+  }
   return { result: 'fail', reason: `${MESSAGE}: src/ changed but nothing under test/ or tests/` };
 }
 
