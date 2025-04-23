@@ -8,13 +8,17 @@
 //
 //   node scripts/regression-test.js <changed-files.txt>
 //
-// A config-only fix can go without a test when the reviewer applies the `no-regression-test`
-// label and the PR body says why, on a line "No regression test: <reason>".
+// A config-only fix can go without a test when a reviewer applies the `no-regression-test`
+// label and the PR body says why, on a line "No regression test: <reason>". The label only counts
+// when it was applied by a CODEOWNER who is not the PR author (read from the PR's label events).
 //
-// Reads PR_BODY and PR_LABELS (JSON array of label names) from the environment.
+// Reads PR_BODY, PR_LABELS (JSON array of label names), PR_NUMBER, PR_AUTHOR, GITHUB_REPOSITORY,
+// GITHUB_API_URL and GITHUB_TOKEN (read-only) from the environment.
 import { readFileSync } from 'node:fs';
 
 import { errorCommand, isMain } from './lib/actions.js';
+import { readOwners } from './lib/codeowners.js';
+import { labelActor } from './lib/github.js';
 
 export const MESSAGE = 'bug fixes need a regression test';
 export const NO_TEST_LABEL = 'no-regression-test';
@@ -57,7 +61,7 @@ export function noTestReason(body) {
 
 /**
  * @param {{ files: string[], body: string, labels: string[] }} pr
- * @returns {{ result: 'skip' | 'pass' | 'fail', reason: string }}
+ * @returns {{ result: 'skip' | 'pass' | 'fail', reason: string, viaLabel?: true }}
  */
 export function evaluate({ files, body, labels }) {
   if (!isBugFix({ body, labels })) {
@@ -70,13 +74,32 @@ export function evaluate({ files, body, labels }) {
   if (files.some(isTestChange)) return { result: 'pass', reason: 'a test was added or changed' };
   if (labels.includes(NO_TEST_LABEL)) {
     const why = noTestReason(body);
-    if (why.length >= MIN_REASON) return { result: 'pass', reason: `${NO_TEST_LABEL}: ${why}` };
+    if (why.length >= MIN_REASON) {
+      return { result: 'pass', reason: `${NO_TEST_LABEL}: ${why}`, viaLabel: true };
+    }
     return {
       result: 'fail',
       reason: `${NO_TEST_LABEL} needs a reason: add a line "No regression test: <why>" to the PR body`,
     };
   }
   return { result: 'fail', reason: `${MESSAGE}: src/ changed but nothing under test/ or tests/` };
+}
+
+/**
+ * The label has to come from a CODEOWNER, and not from the author of the PR.
+ * @param {{ actor: string | undefined, author: string, owners: Set<string> | undefined }} who
+ * @returns {string | undefined} the problem, or undefined when the label counts
+ */
+export function labelProblem({ actor, author, owners }) {
+  if (!actor) return `could not tell who applied ${NO_TEST_LABEL}`;
+  const login = actor.toLowerCase();
+  if (login === author.toLowerCase()) {
+    return `${NO_TEST_LABEL} was applied by the PR author; a CODEOWNER other than the author applies it`;
+  }
+  if (!owners) return `${NO_TEST_LABEL} needs a CODEOWNERS file to check who may apply it`;
+  if (!owners.has(login))
+    return `${NO_TEST_LABEL} was applied by @${actor}, who is not a CODEOWNER`;
+  return undefined;
 }
 
 /**
@@ -92,20 +115,37 @@ export function parseLabels(raw) {
 /**
  * @param {string[]} argv
  * @param {NodeJS.ProcessEnv} env
- * @returns {number} exit code
+ * @param {{ fetch?: import('./lib/github.js').Fetch, cwd?: string }} [deps]
+ * @returns {Promise<number>} exit code
  */
-export function main(argv = process.argv.slice(2), env = process.env) {
+export async function main(argv = process.argv.slice(2), env = process.env, deps = {}) {
   const [filesPath] = argv;
   if (!filesPath) {
     console.error('usage: regression-test.js <changed-files.txt>');
     return 2;
   }
   const files = readFileSync(filesPath, 'utf8').split('\n').filter(Boolean);
-  const { result, reason } = evaluate({
+  let { result, reason, viaLabel } = evaluate({
     files,
     body: env.PR_BODY ?? '',
     labels: parseLabels(env.PR_LABELS),
   });
+
+  if (viaLabel) {
+    const actor = await labelActor({
+      fetch: deps.fetch ?? globalThis.fetch,
+      apiUrl: env.GITHUB_API_URL ?? 'https://api.github.com',
+      repo: env.GITHUB_REPOSITORY ?? '',
+      number: env.PR_NUMBER ?? '',
+      token: env.GITHUB_TOKEN ?? '',
+      label: NO_TEST_LABEL,
+    });
+    const owners = readOwners(deps.cwd ?? process.cwd());
+    const problem = labelProblem({ actor, author: env.PR_AUTHOR ?? '', owners });
+    if (problem) [result, reason] = ['fail', problem];
+    else reason += ` (label applied by @${actor})`;
+  }
+
   if (result === 'fail') {
     console.log(errorCommand(reason, { title: 'regression-test' }));
     return 1;
@@ -114,4 +154,4 @@ export function main(argv = process.argv.slice(2), env = process.env) {
   return 0;
 }
 
-if (isMain(import.meta.url)) process.exitCode = main();
+if (isMain(import.meta.url)) process.exitCode = await main();
