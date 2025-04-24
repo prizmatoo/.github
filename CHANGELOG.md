@@ -25,3 +25,6 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   publish; the component lead publishes with their own token (BTWL-60).
 - `service-catalog.yaml` v1: one entry per repo with owner team, primary, backup, Jira
   component, Confluence page, language and path globs; validated in `make test` (BTWL-70).
+- `no-regression-test` label for the regression-test check: needs a "No regression test:
+  <reason>" line in the PR body and must be applied by a CODEOWNER other than the author.
+  Callers grant `issues: read` and `pull-requests: read` (BTWL-105).
