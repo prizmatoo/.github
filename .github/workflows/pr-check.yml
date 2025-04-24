@@ -49,12 +49,18 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: node .shared-ci/scripts/pr-check.js
 
-  # Bug-fix PRs (Bug Fix ticked, or the bug label) that change src/ must touch test/ or tests/.
+  # Bug-fix PRs (Bug Fix ticked, or the bug label) that change src/ must touch test/ or tests/,
+  # unless a CODEOWNER other than the author applied no-regression-test and the body says why.
   regression-test:
     name: regression test for bug fixes
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    # issues: read for the PR's label events (who applied no-regression-test). Read only.
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4.2.2
         with:
@@ -84,4 +90,7 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node .shared-ci/scripts/regression-test.js "$RUNNER_TEMP/changed-files.txt"
