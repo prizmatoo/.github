@@ -149,6 +149,17 @@ with "bug fixes need a regression test".
 PRs for stories, tasks and spikes (another type ticked) are skipped. The Jira issue type is not
 looked up, because that would need a Jira token in Actions; tick the box.
 
+Some fixes cannot get a sensible test (a config default, a dependency pin). For those a reviewer
+applies the **`no-regression-test`** label and the PR body gives the reason on its own line:
+
+```text
+No regression test: only the default timeout in config/defaults.ts changes
+```
+
+The label counts only when a CODEOWNER of the repo applied it, and not the PR author; the job
+reads the PR's label events to check that (read-only). Without a reason of at least a few words,
+or with the label applied by the author, the check still fails.
+
 Both jobs report as failing checks only. They never comment or review: no bot output on BTWL
 repos. Call the workflow from the repo; it runs again when the title, body or labels change:
 
@@ -160,6 +171,8 @@ on:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 permissions:
   contents: read
+  issues: read # who applied no-regression-test
+  pull-requests: read
 jobs:
   pr-check:
     uses: prizmatoo/.github/.github/workflows/pr-check.yml@main

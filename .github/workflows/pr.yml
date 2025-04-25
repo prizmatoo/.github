@@ -6,8 +6,11 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
+# issues/pull-requests read: the regression-test job reads who applied no-regression-test.
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
 
 jobs:
   pr-check:

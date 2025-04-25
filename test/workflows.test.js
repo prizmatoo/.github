@@ -1,7 +1,7 @@
 // Structural checks over every workflow in .github/workflows.
 // These are the rules from the ENG handbook that we want enforced, not just written down.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
@@ -101,7 +101,40 @@ describe('pr-check.yml', () => {
     assert.match(diff?.run ?? '', /git diff --name-only "\$BASE_SHA\.\.\.\$HEAD_SHA"/);
     const check = steps.find((s) => s.run?.includes('scripts/regression-test.js'));
     assert.ok(check?.env?.PR_BODY && check.env.PR_LABELS, 'PR body and labels come through env');
+    assert.ok(
+      check?.env?.PR_NUMBER && check.env.PR_AUTHOR,
+      'PR number and author come through env',
+    );
   });
+
+  it('lets regression-test read label events, and nothing more', () => {
+    assert.deepEqual(wf.jobs['regression-test'].permissions, {
+      contents: 'read',
+      issues: 'read',
+      'pull-requests': 'read',
+    });
+  });
+});
+
+describe('scripts/', () => {
+  const dir = join(ROOT, 'scripts');
+  const files = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) =>
+    f.endsWith('.js'),
+  );
+
+  for (const file of files) {
+    const text = readFileSync(join(dir, file), 'utf8');
+
+    it(`${file} imports only node: builtins and local files (callers run it without an install)`, () => {
+      for (const [, spec] of text.matchAll(/ from '([^']+)';$/gm)) {
+        assert.match(spec, /^(node:|\.\.?\/)/, spec);
+      }
+    });
+
+    it(`${file} never writes to the GitHub API`, () => {
+      assert.doesNotMatch(text, /method:\s*['"](POST|PUT|PATCH|DELETE)['"]/i);
+    });
+  }
 });
 
 describe('PULL_REQUEST_TEMPLATE.md', () => {
