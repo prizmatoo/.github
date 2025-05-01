@@ -42,7 +42,7 @@ jobs:
           token: ${{ secrets.shared-ci-token || github.token }}
           persist-credentials: false
 
-      - uses: actions/setup-node@v4.1.0
+      - uses: actions/setup-node@v4.4.0
         with:
           node-version: 22
 
