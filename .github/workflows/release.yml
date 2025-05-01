@@ -42,11 +42,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: pnpm/action-setup@v4.0.0
+      - uses: pnpm/action-setup@v4.1.0
         with:
           package_json_file: ${{ inputs.working-directory }}/package.json
 
-      - uses: actions/setup-node@v4.1.0
+      - uses: actions/setup-node@v4.4.0
         with:
           node-version-file: ${{ inputs.working-directory }}/.nvmrc
 
@@ -84,7 +84,7 @@ jobs:
         run: npm pack --pack-destination "$RUNNER_TEMP/release"
 
       - name: Upload package and notes
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: release-${{ github.event.repository.name }}-${{ steps.version.outputs.version }}
           path: ${{ runner.temp }}/release/
