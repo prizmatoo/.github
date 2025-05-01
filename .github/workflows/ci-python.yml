@@ -47,7 +47,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v5.2.1
+      - uses: astral-sh/setup-uv@v5.4.2
         with:
           enable-cache: true
           cache-dependency-glob: ${{ inputs.working-directory }}/uv.lock
@@ -72,7 +72,7 @@ jobs:
           token: ${{ secrets.shared-ci-token || github.token }}
           persist-credentials: false
 
-      - uses: actions/setup-node@v4.1.0
+      - uses: actions/setup-node@v4.4.0
         with:
           node-version: 22
 
@@ -84,7 +84,7 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: coverage-${{ github.event.repository.name }}-${{ github.sha }}
           path: ${{ inputs.working-directory }}/${{ inputs.coverage-path }}

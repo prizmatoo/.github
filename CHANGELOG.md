@@ -28,3 +28,9 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - `no-regression-test` label for the regression-test check: needs a "No regression test:
   <reason>" line in the PR body and must be applied by a CODEOWNER other than the author.
   Callers grant `issues: read` and `pull-requests: read` (BTWL-105).
+
+### Changed
+
+- April bumps: prettier 3.5.3, typescript 5.8.3, yaml 2.7.1; actions/setup-node 4.4.0,
+  actions/cache 4.2.3, actions/upload-artifact 4.6.2, pnpm/action-setup 4.1.0,
+  astral-sh/setup-uv 5.4.2 (BTWL-113).

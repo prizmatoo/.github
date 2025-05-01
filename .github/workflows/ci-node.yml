@@ -48,11 +48,11 @@ jobs:
           persist-credentials: false
 
       # No version input on purpose: the action reads "packageManager" from package.json.
-      - uses: pnpm/action-setup@v4.0.0
+      - uses: pnpm/action-setup@v4.1.0
         with:
           package_json_file: ${{ inputs.working-directory }}/package.json
 
-      - uses: actions/setup-node@v4.1.0
+      - uses: actions/setup-node@v4.4.0
         with:
           node-version-file: ${{ inputs.working-directory }}/.nvmrc
 
@@ -62,7 +62,7 @@ jobs:
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm store
-        uses: actions/cache@v4.2.1
+        uses: actions/cache@v4.2.3
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
@@ -93,7 +93,7 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: coverage-${{ github.event.repository.name }}-${{ github.sha }}
           path: ${{ inputs.working-directory }}/${{ inputs.coverage-path }}
