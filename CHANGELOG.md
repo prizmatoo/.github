@@ -34,4 +34,4 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - April bumps: prettier 3.5.3, typescript 5.8.3, yaml 2.7.1; actions/setup-node 4.4.0,
   actions/cache 4.2.3, actions/upload-artifact 4.6.2, pnpm/action-setup 4.1.0,
   astral-sh/setup-uv 5.4.2 (BTWL-113).
-- gitleaks 8.26.0 as the default `gitleaks-version` (BTWL-128).
+- gitleaks 8.26.0 as the default `gitleaks-version`; yaml 2.8.0, @types/node 22.15.18 (BTWL-128).
