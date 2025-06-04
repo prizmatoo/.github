@@ -22,6 +22,10 @@ on:
         description: Minimum total line coverage in percent; 0 turns the check off
         type: number
         default: 80
+      junit-path:
+        description: JUnit XML written by make test, relative to working-directory
+        type: string
+        default: reports/junit.xml
       shared-ci-ref:
         description: Ref of prizmatoo/.github whose scripts run the coverage check
         type: string
@@ -97,5 +101,14 @@ jobs:
         with:
           name: coverage-${{ github.event.repository.name }}-${{ github.sha }}
           path: ${{ inputs.working-directory }}/${{ inputs.coverage-path }}
+          if-no-files-found: warn
+          retention-days: 14
+
+      # Test results for the Xray import (BTWL-138): one artifact per repo and commit.
+      - name: Upload JUnit results
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: junit-${{ github.event.repository.name }}-${{ github.sha }}
+          path: ${{ inputs.working-directory }}/${{ inputs.junit-path }}
           if-no-files-found: warn
           retention-days: 14
