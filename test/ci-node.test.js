@@ -64,6 +64,12 @@ describe('ci-node.yml', () => {
     assert.ok(shared > runIndex('make ci'));
   });
 
+  it('uploads the JUnit report as junit-<repo>-<sha>', () => {
+    const upload = steps.find((s) => s.name === 'Upload JUnit results');
+    assert.equal(upload?.with?.name, 'junit-${{ github.event.repository.name }}-${{ github.sha }}');
+    assert.equal(wf.on.workflow_call.inputs['junit-path'].default, 'reports/junit.xml');
+  });
+
   it('does not keep the checkout credentials around', () => {
     const checkout = usesStep('actions/checkout@');
     assert.equal(checkout?.with?.['persist-credentials'], false);

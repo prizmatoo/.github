@@ -95,6 +95,11 @@ jobs:
 | `coverage-path`     | `coverage`                       | coverage output uploaded as an artifact              |
 | `coverage-summary`  | `coverage/coverage-summary.json` | summary the coverage floor reads                     |
 | `coverage-floor`    | `80`                             | minimum total line coverage, percent                 |
+| `junit-path`        | `reports/junit.xml`              | JUnit XML uploaded for the Xray import               |
+
+**JUnit results.** `make test` writes `reports/junit.xml` in every repo. `ci-node.yml` uploads it
+as the artifact `junit-<repo>-<sha>` (e.g. `junit-btwl-order-service-3f9c2a4…`), which is what the
+Xray import picks up. `ci-python.yml` uses the same name.
 
 **Coverage floor.** After `make ci`, `scripts/coverage-floor.js` reads the coverage summary and
 fails the job when total line coverage is below the floor, printing the per-file summary (lowest

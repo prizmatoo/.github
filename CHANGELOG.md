@@ -28,6 +28,8 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - `no-regression-test` label for the regression-test check: needs a "No regression test:
   <reason>" line in the PR body and must be applied by a CODEOWNER other than the author.
   Callers grant `issues: read` and `pull-requests: read` (BTWL-105).
+- JUnit upload in `ci-node.yml` and `ci-python.yml`: `reports/junit.xml` as the artifact
+  `junit-<repo>-<sha>`, for the Xray import (BTWL-138).
 
 ### Changed
 
