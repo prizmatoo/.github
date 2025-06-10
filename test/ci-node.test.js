@@ -64,6 +64,25 @@ describe('ci-node.yml', () => {
     assert.ok(shared > runIndex('make ci'));
   });
 
+  it('uploads the JUnit report as junit-<repo>-<sha>', () => {
+    const upload = steps.find((s) => s.name === 'Upload JUnit results');
+    assert.equal(upload?.with?.name, 'junit-${{ github.event.repository.name }}-${{ github.sha }}');
+    assert.equal(wf.on.workflow_call.inputs['junit-path'].default, 'reports/junit.xml');
+  });
+
+  it('uploads the JUnit report when make ci fails, and keeps it 30 days', () => {
+    const upload = steps.find((s) => s.name === 'Upload JUnit results');
+    assert.equal(upload?.if, '${{ !cancelled() }}');
+    assert.equal(upload?.with?.['retention-days'], 30);
+  });
+
+  it('fails a green make ci that wrote no JUnit report', () => {
+    const check = steps.findIndex((s) => s.name === 'Check the JUnit report exists');
+    assert.equal(check, runIndex('make ci') + 1, 'runs right after make ci, only on success');
+    assert.equal(steps[check].if, undefined);
+    assert.match(steps[check].run ?? '', /test -s "\$JUNIT"/);
+  });
+
   it('does not keep the checkout credentials around', () => {
     const checkout = usesStep('actions/checkout@');
     assert.equal(checkout?.with?.['persist-credentials'], false);

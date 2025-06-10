@@ -28,6 +28,12 @@ describe('ci-python.yml', () => {
     );
   });
 
+  it('uploads JUnit exactly like ci-node', () => {
+    /** @param {import('./helpers.js').Workflow} wf */
+    const junit = (wf) => allSteps(wf).find((s) => s.name === 'Upload JUnit results');
+    assert.deepEqual(junit(py), junit(node));
+  });
+
   it('keeps the job id so the required check name is the same', () => {
     assert.deepEqual(Object.keys(py.jobs), Object.keys(node.jobs));
   });

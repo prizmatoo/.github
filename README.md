@@ -95,6 +95,13 @@ jobs:
 | `coverage-path`     | `coverage`                       | coverage output uploaded as an artifact              |
 | `coverage-summary`  | `coverage/coverage-summary.json` | summary the coverage floor reads                     |
 | `coverage-floor`    | `80`                             | minimum total line coverage, percent                 |
+| `junit-path`        | `reports/junit.xml`              | JUnit XML uploaded for the Xray import               |
+
+**JUnit results.** `make test` writes `reports/junit.xml` in every repo. `ci-node.yml` uploads it
+as the artifact `junit-<repo>-<sha>` (e.g. `junit-btwl-order-service-3f9c2a4…`), which is what the
+Xray import picks up, and keeps it 30 days. The upload also runs when `make ci` fails, since the
+failing runs are the ones QA needs. If `make ci` passes but the file is missing, the job fails.
+`ci-python.yml` does the same.
 
 **Coverage floor.** After `make ci`, `scripts/coverage-floor.js` reads the coverage summary and
 fails the job when total line coverage is below the floor, printing the per-file summary (lowest
