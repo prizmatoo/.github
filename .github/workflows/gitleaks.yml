@@ -9,7 +9,7 @@ on:
       gitleaks-version:
         description: gitleaks release to run
         type: string
-        default: 8.26.0
+        default: 8.27.2
       shared-ci-ref:
         description: Ref of prizmatoo/.github whose scripts annotate the findings
         type: string
