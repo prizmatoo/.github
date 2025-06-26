@@ -226,9 +226,10 @@ Release build for packages (first user: `@btwl/pricing`). On a `v<semver>` tag i
    `release-<repo>-<version>`.
 
 **It does not publish and does not create the GitHub release.** No bot writes to BTWL repos, so
-`GITHUB_TOKEN` stays read-only. The component lead publishes the packed tarball to GitHub
-Packages with their own token and creates the GitHub release from `release-notes.md` (OPS page
-"Release process v1"). The build and the tests still run in CI, so what the lead publishes is
+`GITHUB_TOKEN` stays read-only. The component lead creates the GitHub release from
+`release-notes.md` with their own token and attaches the packed tarball to it; consumers vendor
+that file (OPS page "Release process"). GitHub Packages is not used: its npm registry only
+accepts the org's own scope. The build and the tests still run in CI, so what the lead publishes is
 exactly what passed.
 
 ```yaml
