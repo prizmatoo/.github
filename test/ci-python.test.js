@@ -16,6 +16,14 @@ describe('ci-python.yml', () => {
     assert.ok(runIndex('uv python install') >= 0);
   });
 
+  it('checks pyproject.toml, uv.lock and .python-version before anything is installed', () => {
+    const check = steps.findIndex((s) => s.name === 'Check the Python project');
+    assert.ok(check >= 0 && check < runIndex('uv python install'));
+    for (const f of ['pyproject.toml', 'uv.lock', '.python-version']) {
+      assert.match(steps[check].run ?? '', new RegExp(f.replace('.', '\\.')));
+    }
+  });
+
   it('runs make setup, then make ci', () => {
     const setup = runIndex('make setup');
     assert.ok(setup >= 0 && runIndex('make ci') > setup);

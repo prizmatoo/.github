@@ -1,6 +1,6 @@
 # Reusable CI for BTWL Python repos, same shape as ci-node.yml:
 # make setup (uv sync --frozen), then make ci (ruff, mypy, pytest --cov, uv build), then the
-# coverage floor. No Python repo calls it yet; it is here so the first one does not need its own CI.
+# coverage floor. Python 3.12 is the supported line; the repo pins it in .python-version.
 name: ci-python
 
 on:
@@ -55,6 +55,16 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: ${{ inputs.working-directory }}/uv.lock
+
+      # Without these, uv would resolve afresh and pick the newest Python instead of failing.
+      - name: Check the Python project
+        env:
+          DIR: ${{ inputs.working-directory }}
+        run: |
+          for f in pyproject.toml uv.lock .python-version; do
+            test -s "$f" || { echo "::error title=ci-python::$f is missing in $DIR"; exit 1; }
+          done
+          echo "Python $(cat .python-version), lockfile uv.lock"
 
       # Python version comes from the repo's .python-version.
       - name: Install Python
