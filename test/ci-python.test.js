@@ -29,6 +29,11 @@ describe('ci-python.yml', () => {
     assert.ok(setup >= 0 && runIndex('make ci') > setup);
   });
 
+  it('asks ruff for GitHub annotations in make ci', () => {
+    const ci = steps.find((s) => s.run?.trim() === 'make ci');
+    assert.equal(ci?.env?.RUFF_OUTPUT_FORMAT, 'github');
+  });
+
   it('takes the same inputs as ci-node', () => {
     assert.deepEqual(
       Object.keys(py.on.workflow_call.inputs).sort(),

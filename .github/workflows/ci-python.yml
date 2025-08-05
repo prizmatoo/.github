@@ -73,7 +73,10 @@ jobs:
       - name: make setup
         run: make setup
 
+      # ruff reads RUFF_OUTPUT_FORMAT, so lint findings show on the PR's files as annotations.
       - name: make ci
+        env:
+          RUFF_OUTPUT_FORMAT: github
         run: make ci
 
       # A green make ci without a JUnit report means make test stopped writing it.
