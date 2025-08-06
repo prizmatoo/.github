@@ -5,4 +5,4 @@ useDefault = true
 
 [allowlist]
 description = "Generated files that never hold secrets"
-paths = ['''pnpm-lock\.yaml''']
+paths = ['''pnpm-lock\.yaml''', '''uv\.lock''']

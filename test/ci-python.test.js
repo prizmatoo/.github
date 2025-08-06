@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { allSteps, loadWorkflow } from './helpers.js';
+import { ROOT, allSteps, loadWorkflow } from './helpers.js';
 
 const node = loadWorkflow('ci-node.yml');
 const py = loadWorkflow('ci-python.yml');
@@ -49,5 +51,32 @@ describe('ci-python.yml', () => {
 
   it('keeps the job id so the required check name is the same', () => {
     assert.deepEqual(Object.keys(py.jobs), Object.keys(node.jobs));
+  });
+});
+
+// The sample project ci-python-sample.yml runs; it has to look like a real Python repo.
+describe('test/fixtures/python-sample', () => {
+  const dir = join(ROOT, 'test', 'fixtures', 'python-sample');
+  /** @param {string} f */
+  const read = (f) => readFileSync(join(dir, f), 'utf8');
+  const inputs = py.on.workflow_call.inputs;
+
+  it('pins Python 3.12 and commits its lockfile', () => {
+    assert.equal(read('.python-version').trim(), '3.12');
+    assert.match(read('uv.lock'), /^requires-python = "==3\.12\.\*"$/m);
+  });
+
+  it('has the gate targets, with make setup from the lockfile', () => {
+    const makefile = read('Makefile');
+    for (const target of ['setup', 'lint', 'typecheck', 'test', 'build', 'ci']) {
+      assert.match(makefile, new RegExp(`^${target}:`, 'm'), target);
+    }
+    assert.match(makefile, /^setup:\n\tuv sync --frozen$/m);
+  });
+
+  it('writes JUnit and the coverage summary where ci-python looks for them', () => {
+    const pyproject = read('pyproject.toml');
+    assert.match(pyproject, new RegExp(`--junitxml=${inputs['junit-path'].default}`));
+    assert.match(pyproject, new RegExp(`--cov-report=json:${inputs['coverage-summary'].default}`));
   });
 });
