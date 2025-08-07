@@ -54,6 +54,22 @@ describe('ci-python.yml', () => {
   });
 });
 
+describe('ci-python-sample.yml', () => {
+  const sample = loadWorkflow('ci-python-sample.yml');
+
+  it('runs ci-python.yml from the same commit on the sample project', () => {
+    const job = sample.jobs.ci;
+    assert.equal(job.uses, './.github/workflows/ci-python.yml');
+    assert.equal(job.with?.['working-directory'], 'test/fixtures/python-sample');
+    assert.match(String(job.with?.['shared-ci-ref']), /pull_request\.head\.sha/);
+  });
+
+  it('runs on every PR and on main', () => {
+    assert.ok('pull_request' in sample.on);
+    assert.deepEqual(sample.on.push?.branches, ['main']);
+  });
+});
+
 // The sample project ci-python-sample.yml runs; it has to look like a real Python repo.
 describe('test/fixtures/python-sample', () => {
   const dir = join(ROOT, 'test', 'fixtures', 'python-sample');
