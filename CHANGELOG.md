@@ -34,6 +34,8 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   `.python-version` first, ruff findings as PR annotations; a sample project in
   `test/fixtures/python-sample`, run through `ci-python.yml` by `ci-python-sample.yml` on every
   PR (BTWL-193).
+- Xray import in `ci-node.yml` and `ci-python.yml`: with the `xray-test-execution` input, main
+  builds send the JUnit report to that Test Execution with `scripts/xray-import.js` (BTWL-197).
 
 ### Changed
 
