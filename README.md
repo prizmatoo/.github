@@ -164,6 +164,17 @@ example, and `ci-python-sample.yml` runs it through this workflow on every PR he
 | `make test`      | `pytest --junitxml=reports/junit.xml --cov --cov-report=json:coverage.json` |
 | `make build`     | `uv build`                                                                  |
 
+**JUnit ids.** pytest writes `classname` as the test module's dotted path and `name` as the test
+function, so the id Xray matches is `<module>.<function>`, for example
+`tests.test_pallets.test_a_part_pallet_counts_as_one` (a parametrized case adds `[<id>]`, a
+test class adds its name after the module). Keep `junit_family = "xunit2"` in `pyproject.toml`
+and give tests names that say what they check: the id is the Generic test definition (QA page
+"Test repository conventions").
+
+**Line coverage.** The floor reads `totals.percent_covered` from `coverage.json`. With
+`branch = true` coverage.py folds branches into that number, so leave branch measurement off
+(the default) or the floor no longer measures lines.
+
 **Repo owner checklist** (Python):
 
 - [ ] `.python-version` contains `3.12`, and `requires-python = ">=3.12,<3.13"` in `pyproject.toml`

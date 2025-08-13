@@ -39,6 +39,11 @@ testpaths = ["tests"]
 # reports/junit.xml is what ci-python uploads for the Xray import; coverage.json is what the
 # coverage floor reads.
 addopts = "--junitxml=reports/junit.xml --cov=sample --cov-report=term --cov-report=json:coverage.json"
+# JUnit ids are <classname>.<name>, e.g. tests.test_pallets.test_a_part_pallet_counts_as_one:
+# the definition of the Generic test in Xray.
+junit_family = "xunit2"
 
 [tool.coverage.run]
-branch = true
+# The floor is on lines (Engineering standards §2). With branch = true, coverage.py's
+# totals.percent_covered mixes lines and branches and the floor would read a different number.
+branch = false
