@@ -3,5 +3,9 @@ coverage/
 reports/
 dist/
 pnpm-lock.yaml
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 # Kept byte-for-byte as agreed in BTWL-42; prettier would add blank lines under each heading.
 .github/PULL_REQUEST_TEMPLATE.md

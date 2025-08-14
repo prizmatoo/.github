@@ -3,3 +3,11 @@ dist/
 coverage/
 reports/
 .shared-ci/
+# Python (test/fixtures/python-sample)
+.venv/
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.json

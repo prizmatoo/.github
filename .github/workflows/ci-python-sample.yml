@@ -1,0 +1,19 @@
+# Runs ci-python.yml, from this commit, on test/fixtures/python-sample: a change to the Python CI
+# is tested here before any Python repo picks it up from main (BTWL-193). A workflow of its own,
+# so its coverage and JUnit artifacts do not clash with the ones ci.yml uploads.
+name: ci-python-sample
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci-python.yml
+    with:
+      working-directory: test/fixtures/python-sample
+      shared-ci-ref: ${{ github.event.pull_request.head.sha || github.sha }}

@@ -1,0 +1,49 @@
+# The smallest Python project that goes through ci-python.yml end to end, run by
+# .github/workflows/ci-python-sample.yml on every PR here (BTWL-193). Keep it as a Python repo
+# would set itself up: the gate targets in the Makefile, the tool settings here.
+[project]
+name = "ci-python-sample"
+version = "0.0.0"
+description = "Sample project for the shared Python CI"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "mypy==1.17.1",
+  "pytest==8.4.1",
+  "pytest-cov==6.2.1",
+  "ruff==0.12.7",
+]
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sample"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# reports/junit.xml is what ci-python uploads for the Xray import; coverage.json is what the
+# coverage floor reads.
+addopts = "--junitxml=reports/junit.xml --cov=sample --cov-report=term --cov-report=json:coverage.json"
+# JUnit ids are <classname>.<name>, e.g. tests.test_pallets.test_a_part_pallet_counts_as_one:
+# the definition of the Generic test in Xray.
+junit_family = "xunit2"
+
+[tool.coverage.run]
+# The floor is on lines (Engineering standards §2). With branch = true, coverage.py's
+# totals.percent_covered mixes lines and branches and the floor would read a different number.
+branch = false

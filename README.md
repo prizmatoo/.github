@@ -132,10 +132,56 @@ floor.
 
 ### `ci-python.yml`
 
-Same shape for the Python repos: checkout, `astral-sh/setup-uv` (with its uv cache), Python from
-`.python-version`, `make setup` (`uv sync --frozen`), `make ci`, coverage floor. Same inputs as
+Same shape for the Python repos: checkout, `astral-sh/setup-uv` (with its uv cache), a check that
+`pyproject.toml`, `uv.lock` and `.python-version` are there, Python from `.python-version`,
+`make setup` (`uv sync --frozen`), `make ci`, the JUnit check, coverage floor. Same inputs as
 `ci-node.yml`; `coverage-path` and `coverage-summary` default to `coverage.json`
-(`pytest --cov --cov-report=json`).
+(`pytest --cov --cov-report=json`). ruff runs with `RUFF_OUTPUT_FORMAT=github`, so its findings
+show as annotations on the PR's files.
+
+```yaml
+# .github/workflows/ci.yml
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  ci:
+    uses: prizmatoo/.github/.github/workflows/ci-python.yml@main
+```
+
+The gate targets map to the Python tools like this (`test/fixtures/python-sample` is a working
+example, and `ci-python-sample.yml` runs it through this workflow on every PR here):
+
+| target           | Python                                                                      |
+| ---------------- | --------------------------------------------------------------------------- |
+| `make setup`     | `uv sync --frozen`                                                          |
+| `make lint`      | `ruff check .` and `ruff format --check .`                                  |
+| `make typecheck` | `mypy` (strict) over `src` and `tests`                                      |
+| `make test`      | `pytest --junitxml=reports/junit.xml --cov --cov-report=json:coverage.json` |
+| `make build`     | `uv build`                                                                  |
+
+**JUnit ids.** pytest writes `classname` as the test module's dotted path and `name` as the test
+function, so the id Xray matches is `<module>.<function>`, for example
+`tests.test_pallets.test_a_part_pallet_counts_as_one` (a parametrized case adds `[<id>]`, a
+test class adds its name after the module). Keep `junit_family = "xunit2"` in `pyproject.toml`
+and give tests names that say what they check: the id is the Generic test definition (QA page
+"Test repository conventions").
+
+**Line coverage.** The floor reads `totals.percent_covered` from `coverage.json`. With
+`branch = true` coverage.py folds branches into that number, so leave branch measurement off
+(the default) or the floor no longer measures lines.
+
+**Repo owner checklist** (Python):
+
+- [ ] `.python-version` contains `3.12`, and `requires-python = ">=3.12,<3.13"` in `pyproject.toml`
+- [ ] `uv.lock` committed; `make setup` is `uv sync --frozen`
+- [ ] dev tools (ruff, mypy, pytest, pytest-cov) pinned in a `dev` dependency group
+- [ ] Makefile has `setup lint typecheck test build ci`; `make ci` passes locally in under 3 minutes
+- [ ] `.github/workflows/ci.yml` calls `ci-python.yml@main` as above
 
 ### `pr-check.yml`
 
