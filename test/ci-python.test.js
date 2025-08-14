@@ -95,4 +95,10 @@ describe('test/fixtures/python-sample', () => {
     assert.match(pyproject, new RegExp(`--junitxml=${inputs['junit-path'].default}`));
     assert.match(pyproject, new RegExp(`--cov-report=json:${inputs['coverage-summary'].default}`));
   });
+
+  it('keeps JUnit ids as Xray reads them and coverage on lines only', () => {
+    const pyproject = read('pyproject.toml');
+    assert.match(pyproject, /^junit_family = "xunit2"$/m);
+    assert.doesNotMatch(pyproject, /^branch = true$/m);
+  });
 });
