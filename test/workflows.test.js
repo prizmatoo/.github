@@ -132,6 +132,11 @@ describe('scripts/', () => {
     });
 
     it(`${file} never writes to the GitHub API`, () => {
+      if (file === 'xray-import.js') {
+        // The one script that writes, and only to Xray Cloud.
+        assert.doesNotMatch(text, /api\.github\.com|GITHUB_TOKEN/);
+        return;
+      }
       assert.doesNotMatch(text, /method:\s*['"](POST|PUT|PATCH|DELETE)['"]/i);
     });
   }

@@ -1,0 +1,75 @@
+# Reusable Xray import (BTWL-197): the JUnit report of this commit's ci-node / ci-python job
+# into an existing Test Execution, normally the one for the release in progress.
+# The execution key is required: no key, no import, and the job fails instead of letting Xray
+# create an execution. Called after ci on main builds only; see the README.
+name: xray-import
+
+on:
+  workflow_call:
+    inputs:
+      test-execution-key:
+        description: Key of the Test Execution in BTWLQA that receives the results, e.g. BTWLQA-123
+        type: string
+        required: true
+      junit-artifact:
+        description: Artifact with the JUnit XML; defaults to the one ci-node / ci-python upload for this commit
+        type: string
+        default: ''
+      shared-ci-ref:
+        description: Ref of prizmatoo/.github whose scripts run the import
+        type: string
+        default: main
+    secrets:
+      xray-client-id:
+        description: Xray Cloud API key id of the QA account that owns the execution
+        required: true
+      xray-client-secret:
+        description: Xray Cloud API key secret of the same account
+        required: true
+      shared-ci-token:
+        description: Read-only token for prizmatoo/.github (private repo); falls back to GITHUB_TOKEN
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  import:
+    name: Xray import
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check the test execution key
+        env:
+          KEY: ${{ inputs.test-execution-key }}
+        run: |
+          [[ "$KEY" =~ ^[A-Z][A-Z0-9]*-[1-9][0-9]*$ ]] || {
+            echo "::error title=xray::test-execution-key \"$KEY\" is not a Test Execution key such as BTWLQA-123"
+            exit 1
+          }
+
+      - name: Check out shared CI scripts
+        uses: actions/checkout@v4.2.2
+        with:
+          repository: prizmatoo/.github
+          ref: ${{ inputs.shared-ci-ref }}
+          path: .shared-ci
+          token: ${{ secrets.shared-ci-token || github.token }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 22
+
+      - name: Download the JUnit report
+        uses: actions/download-artifact@v4.3.0
+        with:
+          name: ${{ inputs.junit-artifact || format('junit-{0}-{1}', github.event.repository.name, github.sha) }}
+          path: reports
+
+      - name: Import into the test execution
+        env:
+          KEY: ${{ inputs.test-execution-key }}
+          XRAY_CLIENT_ID: ${{ secrets.xray-client-id }}
+          XRAY_CLIENT_SECRET: ${{ secrets.xray-client-secret }}
+        run: node .shared-ci/scripts/xray-import.js --execution "$KEY" reports/*.xml
