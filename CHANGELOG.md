@@ -34,8 +34,9 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   `.python-version` first, ruff findings as PR annotations; a sample project in
   `test/fixtures/python-sample`, run through `ci-python.yml` by `ci-python-sample.yml` on every
   PR (BTWL-193).
-- Xray import in `ci-node.yml` and `ci-python.yml`: with the `xray-test-execution` input, main
-  builds send the JUnit report to that Test Execution with `scripts/xray-import.js` (BTWL-197).
+- Reusable `xray-import.yml`: imports a build's `junit-<repo>-<sha>` report into a Test Execution
+  in Xray; the execution key is a required input, so a missing key fails the job and CI never
+  creates an execution. `scripts/xray-import.js` does the same by hand (BTWL-197).
 
 ### Changed
 

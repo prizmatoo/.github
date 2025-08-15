@@ -89,14 +89,13 @@ jobs:
     uses: prizmatoo/.github/.github/workflows/ci-node.yml@main
 ```
 
-| input                 | default                          | meaning                                              |
-| --------------------- | -------------------------------- | ---------------------------------------------------- |
-| `working-directory`   | `.`                              | where `package.json`, `.nvmrc` and the Makefile live |
-| `coverage-path`       | `coverage`                       | coverage output uploaded as an artifact              |
-| `coverage-summary`    | `coverage/coverage-summary.json` | summary the coverage floor reads                     |
-| `coverage-floor`      | `80`                             | minimum total line coverage, percent                 |
-| `junit-path`          | `reports/junit.xml`              | JUnit XML uploaded for the Xray import               |
-| `xray-test-execution` | (empty)                          | Test Execution that receives main builds' results    |
+| input               | default                          | meaning                                              |
+| ------------------- | -------------------------------- | ---------------------------------------------------- |
+| `working-directory` | `.`                              | where `package.json`, `.nvmrc` and the Makefile live |
+| `coverage-path`     | `coverage`                       | coverage output uploaded as an artifact              |
+| `coverage-summary`  | `coverage/coverage-summary.json` | summary the coverage floor reads                     |
+| `coverage-floor`    | `80`                             | minimum total line coverage, percent                 |
+| `junit-path`        | `reports/junit.xml`              | JUnit XML uploaded for the Xray import               |
 
 **JUnit results.** `make test` writes `reports/junit.xml` in every repo. `ci-node.yml` uploads it
 as the artifact `junit-<repo>-<sha>` (e.g. `junit-btwl-order-service-3f9c2a4…`), which is what the
@@ -104,15 +103,8 @@ Xray import picks up, and keeps it 30 days. The upload also runs when `make ci` 
 failing runs are the ones QA needs. If `make ci` passes but the file is missing, the job fails.
 `ci-python.yml` does the same.
 
-**Xray import.** On `main`, when `xray-test-execution` is set, the job sends the JUnit report to
-that Test Execution in Xray (project BTWLQA) with `scripts/xray-import.js`, also when `make ci`
-failed. QA creates the execution for the release and gives the repo its key; the Xray API key
-pair goes in the `xray-client-id` and `xray-client-secret` secrets. The same script works by hand:
-
-```sh
-XRAY_CLIENT_ID=... XRAY_CLIENT_SECRET=... \
-  node scripts/xray-import.js --execution BTWLQA-123 reports/junit.xml
-```
+**Xray import.** `xray-import.yml` (below) sends this artifact to the release's Test Execution
+in Xray; a repo adds it as a second job.
 
 **Coverage floor.** After `make ci`, `scripts/coverage-floor.js` reads the coverage summary and
 fails the job when total line coverage is below the floor, printing the per-file summary (lowest
@@ -193,6 +185,60 @@ and give tests names that say what they check: the id is the Generic test defini
 - [ ] dev tools (ruff, mypy, pytest, pytest-cov) pinned in a `dev` dependency group
 - [ ] Makefile has `setup lint typecheck test build ci`; `make ci` passes locally in under 3 minutes
 - [ ] `.github/workflows/ci.yml` calls `ci-python.yml@main` as above
+
+### `xray-import.yml`
+
+Imports the JUnit report of a build into a Test Execution in Xray (project BTWLQA), so the
+release's execution shows the automated results next to the manual runs (BTWL-197). It runs after
+`ci-node.yml` or `ci-python.yml` in the same workflow run, downloads their `junit-<repo>-<sha>`
+artifact and sends each file to Xray's JUnit import for that execution
+(`scripts/xray-import.js`).
+
+**The execution key is required.** QA creates the Test Execution for a release beforehand (QA page
+"Test repository conventions") and gives the repo its key. Without a key, or with something that is
+not an issue key, the job fails at its first step, so Xray never creates an execution of its own.
+Xray matches each testcase to the Generic test whose definition is its JUnit id (see **JUnit ids**
+above); a testcase that has no Generic test yet becomes a new one, so name tests before they reach
+`main`.
+
+It is a workflow of its own, not an input of `ci-node.yml` and `ci-python.yml`, so the key can be
+required without touching the repos that do not import: their CI is unchanged. The API key pair is
+the one of the QA account that owns the execution (the runs show who imported them), kept as repo
+or org secrets.
+
+```yaml
+# .github/workflows/ci.yml: a main build that imports into the release's execution
+jobs:
+  ci:
+    uses: prizmatoo/.github/.github/workflows/ci-node.yml@main
+  xray:
+    needs: ci
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
+    uses: prizmatoo/.github/.github/workflows/xray-import.yml@main
+    with:
+      test-execution-key: ${{ vars.XRAY_TEST_EXECUTION }}
+    secrets:
+      xray-client-id: ${{ secrets.XRAY_CLIENT_ID }}
+      xray-client-secret: ${{ secrets.XRAY_CLIENT_SECRET }}
+```
+
+`vars.XRAY_TEST_EXECUTION` is a repository variable QA sets to the release's execution and moves
+to the next one when it is created; while it is unset the `xray` job fails and says why. The job
+runs when `make ci` failed too: failing runs are the ones QA needs.
+
+| input                | default              | meaning                                      |
+| -------------------- | -------------------- | -------------------------------------------- |
+| `test-execution-key` | (required)           | Test Execution in BTWLQA, e.g. `BTWLQA-123`  |
+| `junit-artifact`     | `junit-<repo>-<sha>` | artifact with the JUnit XML                  |
+| `shared-ci-ref`      | `main`               | ref of this repo whose `xray-import.js` runs |
+
+**By hand.** The same script imports a report downloaded from a build, for example a release
+build's results into the release's execution:
+
+```sh
+XRAY_CLIENT_ID=... XRAY_CLIENT_SECRET=... \
+  node scripts/xray-import.js --execution BTWLQA-123 junit.xml
+```
 
 ### `pr-check.yml`
 

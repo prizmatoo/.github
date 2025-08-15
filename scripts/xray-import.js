@@ -3,11 +3,11 @@
 //
 //   XRAY_CLIENT_ID=... XRAY_CLIENT_SECRET=... \
 //     node scripts/xray-import.js --execution BTWLQA-123 reports/*.xml
-//   node scripts/xray-import.js --project BTWLQA reports/*.xml     (a new execution)
 //
-// Each file goes to Xray's JUnit import with `testExecKey`, so the results land in that execution.
-// Xray matches every testcase to the Generic test whose definition is its `classname.name`
-// (QA page "Test repository conventions").
+// Each file goes to Xray's JUnit import with `testExecKey`, so the results land in that execution
+// and nowhere else. Xray matches every testcase to the Generic test whose definition is its
+// `classname.name` (QA page "Test repository conventions"). Without a valid execution key nothing
+// is imported and the script fails: CI never creates a Test Execution of its own.
 import { readFileSync } from 'node:fs';
 
 import { errorCommand, isMain } from './lib/actions.js';
@@ -16,7 +16,7 @@ export const XRAY_URL = 'https://xray.cloud.getxray.app';
 const KEY = /^[A-Z][A-Z0-9]*-[1-9]\d*$/;
 
 /**
- * @typedef {{ execution?: string, project?: string, files: string[] }} Args
+ * @typedef {{ execution?: string, files: string[] }} Args
  * @typedef {{ file: string, key: string }} Imported
  * @typedef {(url: string, init: { method: string, headers: Record<string, string>, body: string }) => Promise<{ ok: boolean, status: number, text: () => Promise<string> }>} Fetch
  */
@@ -30,7 +30,6 @@ export function parseArgs(argv) {
   const args = { files: [] };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--execution') args.execution = argv[++i];
-    else if (argv[i] === '--project') args.project = argv[++i];
     else args.files.push(argv[i]);
   }
   return args;
@@ -41,7 +40,8 @@ export function parseArgs(argv) {
  * @param {string | undefined} key
  */
 export function keyProblem(key) {
-  if (!key) return 'no test execution key';
+  if (!key)
+    return 'no test execution key: pass the key of the release Test Execution (input test-execution-key)';
   if (!KEY.test(key)) return `"${key}" is not a Jira issue key such as BTWLQA-123`;
   return undefined;
 }
@@ -63,17 +63,16 @@ async function post(fetchFn, url, headers, body) {
 }
 
 /**
- * Import each JUnit file into the Test Execution `execution`, or into a new one in `project`.
- * @param {{ execution?: string, project?: string, files: string[], clientId: string, clientSecret: string, baseUrl?: string, fetchFn?: Fetch, read?: (file: string) => string }} opts
+ * Import each JUnit file into the Test Execution `execution`.
+ * @param {{ execution: string, files: string[], clientId: string, clientSecret: string, baseUrl?: string, fetchFn?: Fetch, read?: (file: string) => string }} opts
  * @returns {Promise<Imported[]>}
  */
 export async function importReports(opts) {
-  const { execution, project, files, clientId, clientSecret } = opts;
+  const { execution, files, clientId, clientSecret } = opts;
   const baseUrl = opts.baseUrl ?? XRAY_URL;
   const fetchFn = opts.fetchFn ?? /** @type {Fetch} */ (/** @type {unknown} */ (fetch));
   const read = opts.read ?? ((/** @type {string} */ f) => readFileSync(f, 'utf8'));
-  if (!execution && !project) throw new Error('give --execution <key> or --project <key>');
-  const problem = execution ? keyProblem(execution) : undefined;
+  const problem = keyProblem(execution);
   if (problem) throw new Error(problem);
   if (files.length === 0) throw new Error('no JUnit reports given (reports/*.xml)');
   if (!clientId || !clientSecret)
@@ -89,13 +88,10 @@ export async function importReports(opts) {
   /** @type {Imported[]} */
   const done = [];
   for (const { file, xml } of reports) {
-    const query = execution
-      ? `testExecKey=${encodeURIComponent(execution)}`
-      : `projectKey=${encodeURIComponent(project ?? '')}`;
-    const url = `${baseUrl}/api/v2/import/execution/junit?${query}`;
+    const url = `${baseUrl}/api/v2/import/execution/junit?testExecKey=${encodeURIComponent(execution)}`;
     const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'text/xml' };
     const answer = JSON.parse(await post(fetchFn, url, headers, xml));
-    if (execution && answer.key !== execution) {
+    if (answer.key !== execution) {
       throw new Error(`Xray put ${file} into ${answer.key}, not ${execution}`);
     }
     done.push({ file, key: answer.key });
@@ -112,8 +108,7 @@ export async function main(argv = process.argv.slice(2), env = process.env, fetc
   const args = parseArgs(argv);
   try {
     const done = await importReports({
-      execution: args.execution,
-      project: args.project,
+      execution: args.execution ?? '',
       files: args.files,
       clientId: env.XRAY_CLIENT_ID ?? '',
       clientSecret: env.XRAY_CLIENT_SECRET ?? '',

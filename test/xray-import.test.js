@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { importReports, keyProblem, main, parseArgs, XRAY_URL } from '../scripts/xray-import.js';
+import { allSteps, loadWorkflow } from './helpers.js';
 
 const JUNIT =
   '<testsuites><testsuite name="s"><testcase classname="test/a.test.ts" name="x"/></testsuite></testsuites>';
@@ -44,6 +45,7 @@ describe('xray-import.js', () => {
 
   it('accepts only a Jira issue key as the execution', () => {
     assert.equal(keyProblem('BTWLQA-71'), undefined);
+    assert.match(String(keyProblem('')), /no test execution key/);
     assert.match(String(keyProblem(undefined)), /no test execution key/);
     assert.match(String(keyProblem('btwlqa-71')), /not a Jira issue key/);
     assert.match(String(keyProblem('BTWLQA-')), /not a Jira issue key/);
@@ -76,29 +78,17 @@ describe('xray-import.js', () => {
     assert.equal(xray.calls[1].body, JUNIT);
   });
 
-  it('imports into a new execution of a project when given --project', async () => {
-    const xray = fakeXray({ execution: 'BTWLQA-90' });
-    const done = await importReports({
-      ...opts,
-      project: 'BTWLQA',
-      files: ['r.xml'],
-      fetchFn: xray.fetchFn,
-      read: reader({ 'r.xml': JUNIT }),
-    });
-    assert.deepEqual(done, [{ file: 'r.xml', key: 'BTWLQA-90' }]);
-    assert.equal(xray.calls[1].url, `${XRAY_URL}/api/v2/import/execution/junit?projectKey=BTWLQA`);
-  });
-
-  it('sends nothing without an execution or a project', async () => {
+  it('sends nothing without an execution key', async () => {
     const xray = fakeXray();
     await assert.rejects(
       importReports({
         ...opts,
+        execution: '',
         files: ['r.xml'],
         fetchFn: xray.fetchFn,
         read: reader({ 'r.xml': JUNIT }),
       }),
-      /give --execution <key> or --project <key>/,
+      /no test execution key/,
     );
     assert.equal(xray.calls.length, 0);
   });
@@ -168,9 +158,53 @@ describe('xray-import.js', () => {
     } finally {
       console.log = orig;
     }
-    assert.match(
-      lines.join('\n'),
-      /^::error title=xray::give --execution <key> or --project <key>/m,
-    );
+    assert.match(lines.join('\n'), /^::error title=xray::no test execution key/m);
   });
+});
+
+describe('xray-import.yml', () => {
+  const wf = loadWorkflow('xray-import.yml');
+  const call = wf.on.workflow_call;
+  const steps = allSteps(wf);
+
+  it('requires the test execution key and the Xray API key pair', () => {
+    assert.deepEqual(call.inputs['test-execution-key'], {
+      description: call.inputs['test-execution-key'].description,
+      type: 'string',
+      required: true,
+    });
+    assert.equal(call.secrets['xray-client-id'].required, true);
+    assert.equal(call.secrets['xray-client-secret'].required, true);
+  });
+
+  it('checks the key before it downloads or imports anything', () => {
+    assert.equal(steps[0].name, 'Check the test execution key');
+    assert.equal(steps[0].env?.KEY, '${{ inputs.test-execution-key }}');
+    assert.match(steps[0].run ?? '', /::error title=xray::/);
+  });
+
+  it('imports the JUnit artifact ci-node and ci-python upload for this commit', () => {
+    const download = steps.find((s) => s.uses?.startsWith('actions/download-artifact@'));
+    assert.match(String(download?.with?.name), /junit-\{0\}-\{1\}/);
+    const run = steps.find((s) => s.run?.includes('scripts/xray-import.js'));
+    assert.ok(run, 'import step missing');
+    assert.match(run.run ?? '', /--execution "\$KEY"/);
+    assert.equal(run.env?.XRAY_CLIENT_ID, '${{ secrets.xray-client-id }}');
+    for (const s of steps)
+      assert.doesNotMatch(s.run ?? '', /\$\{\{/, `step "${s.name}" interpolates into run`);
+  });
+});
+
+describe('ci-node.yml and ci-python.yml', () => {
+  for (const file of ['ci-node.yml', 'ci-python.yml']) {
+    it(`${file} has no Xray input or import, so callers without Xray secrets are unaffected`, () => {
+      const wf = loadWorkflow(file);
+      const call = wf.on.workflow_call;
+      assert.deepEqual(
+        Object.keys({ ...call.inputs, ...call.secrets }).filter((k) => k.includes('xray')),
+        [],
+      );
+      assert.ok(!allSteps(wf).some((s) => s.run?.includes('xray-import')));
+    });
+  }
 });
