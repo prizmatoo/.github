@@ -66,3 +66,14 @@ repos:
     confluence_page: Service catalog
     language: TypeScript (Fastify, Vitest)
     paths: [src/**, test/**, openapi.yaml, docs/adr/**]
+
+  - name: btwl-inventory-service
+    description: 'IMS: warehouses, SKUs, stock levels and reservations (reserve, commit, release)'
+    owner_team: Warehouse Systems
+    primary: sathwik-prizmato
+    backup: aaquib-prizmato
+    jira_component: btwl-inventory-service
+    confluence_space: BTWL
+    confluence_page: Service catalog
+    language: Python 3.12 (FastAPI, pytest)
+    paths: [src/**, tests/**, openapi.yaml, docs/runbooks/**]
