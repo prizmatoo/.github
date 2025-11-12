@@ -69,6 +69,7 @@ describe('service-catalog.yaml', () => {
     assert.deepEqual(names, [
       '.github',
       'btwl-auth-gateway',
+      'btwl-inventory-service',
       'btwl-order-service',
       'btwl-pricing-lib',
       'btwl-procurement-api',
