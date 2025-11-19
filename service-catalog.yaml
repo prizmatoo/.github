@@ -77,3 +77,14 @@ repos:
     confluence_page: Service catalog
     language: Python 3.12 (FastAPI, pytest)
     paths: [src/**, tests/**, openapi.yaml, docs/runbooks/**]
+
+  - name: btwl-billing-service
+    description: Invoices from shipped orders, TollGate tax, credit memos, nightly Ledgerline invoice export and reconciliation
+    owner_team: Order-to-Cash
+    primary: krunal-prizmato
+    backup: venkat-prizmato
+    jira_component: btwl-billing-service
+    confluence_space: BTWL
+    confluence_page: Service catalog
+    language: TypeScript (Fastify, Vitest)
+    paths: [src/**, test/**, openapi.yaml, contracts/vendored/**, db/**]
