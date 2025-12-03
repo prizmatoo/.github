@@ -9,9 +9,11 @@ default pull request template, the CODEOWNERS template and the small Node script
 
 ## Run it locally
 
-Node 22 (`.nvmrc`) and pnpm 9 (`packageManager` in `package.json`; `corepack enable` picks it up).
+Node 22 (`.nvmrc`) and the pnpm version pinned in `package.json` (`packageManager`), through
+corepack. A global pnpm of another major fails `make setup` on the lockfile.
 
 ```bash
+corepack enable # once per machine: provides pnpm 9.15.4 from packageManager
 make setup      # pnpm install --frozen-lockfile
 make ci         # lint, typecheck, test, build
 ```
@@ -23,6 +25,10 @@ make ci         # lint, typecheck, test, build
 | `make test`      | `node --test`; JUnit XML to `reports/junit.xml`               |
 | `make build`     | nothing to build: the workflows run the scripts from source   |
 | `make ci`        | installs if `node_modules/` is missing, then all of the above |
+
+`make ci` does not run the Python sample (`test/fixtures/python-sample`); the `ci-python-sample`
+workflow does that on every PR. To run it yourself you need uv and Python 3.12
+(`uv python install 3.12`): `make -C test/fixtures/python-sample setup ci`.
 
 ## Pull request template
 
