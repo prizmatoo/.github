@@ -48,3 +48,4 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - gitleaks 8.26.0 as the default `gitleaks-version`; yaml 2.8.0, @types/node 22.15.18 (BTWL-128).
 - astral-sh/setup-uv 6.1.0 in `ci-python.yml`; @types/node 22.15.29 (BTWL-136).
 - June bumps: prettier 3.6.0, @types/node 22.15.33, gitleaks 8.27.2, astral-sh/setup-uv 6.3.0 (BTWL-157).
+- December bumps: typescript 5.9.3 (BTWL-264).
