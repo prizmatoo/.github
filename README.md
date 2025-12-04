@@ -30,6 +30,18 @@ make ci         # lint, typecheck, test, build
 workflow does that on every PR. To run it yourself you need uv and Python 3.12
 (`uv python install 3.12`): `make -C test/fixtures/python-sample setup ci`.
 
+**Running a script by hand.** In Actions the workflows set these from the event; locally, copy
+`.env.example` to `.env` and export what the script needs. `make test` reads none of them.
+
+| variable                               | read by              | what                                                  |
+| -------------------------------------- | -------------------- | ----------------------------------------------------- |
+| `PR_BRANCH`, `PR_TITLE`, `PR_BODY`     | `pr-check.js`        | the PR's branch, title and body                       |
+| `PR_BODY`, `PR_LABELS`                 | `regression-test.js` | body and labels (JSON array of names)                 |
+| `PR_NUMBER`, `PR_AUTHOR`               | `regression-test.js` | only with `no-regression-test`: who added the label   |
+| `GITHUB_REPOSITORY`, `GITHUB_TOKEN`    | `regression-test.js` | `prizmatoo/<repo>` and a token that can read the PR   |
+| `XRAY_CLIENT_ID`, `XRAY_CLIENT_SECRET` | `xray-import.js`     | your Xray Cloud API key pair                          |
+| `GITHUB_OUTPUT`                        | `tag-version.js`     | set by Actions; unset locally, the version is printed |
+
 ## Pull request template
 
 `.github/PULL_REQUEST_TEMPLATE.md` is the org default: every repo without its own template gets it.
