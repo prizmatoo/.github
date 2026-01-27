@@ -39,6 +39,7 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   creates an execution. `scripts/xray-import.js` does the same by hand (BTWL-197).
 - `btwl-inventory-service` in `service-catalog.yaml`, live at DLH-01 with 0.9.0 (BTWL-256).
 - `btwl-billing-service` in `service-catalog.yaml`, with 1.1.0 (BTWL-258).
+- `btwl-approval-router` in `service-catalog.yaml`, with its first release 0.3.0 (BTWL-311).
 
 ### Changed
 
