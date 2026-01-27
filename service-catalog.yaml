@@ -106,3 +106,14 @@ repos:
       - db/migrations/**
       - examples/**
       - .github/workflows/route-approval.yml
+
+  - name: btwl-console
+    description: 'Internal web console: requisitions, approvals inbox, order search and detail; one module per squad'
+    owner_team: Procurement & Spend
+    primary: shubham-prizmato
+    backup: aaquib-prizmato
+    jira_component: btwl-console
+    confluence_space: BTWL
+    confluence_page: Service catalog
+    language: TypeScript (React, Vite, Fastify session server, Vitest, Playwright)
+    paths: [src/**, server/**, test/**, e2e/**, specs/**, api-versions.json]
