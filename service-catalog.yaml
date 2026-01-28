@@ -88,3 +88,32 @@ repos:
     confluence_page: Service catalog
     language: TypeScript (Fastify, Vitest)
     paths: [src/**, test/**, openapi.yaml, contracts/vendored/**, db/**]
+
+  - name: btwl-approval-router
+    description: Approval routing from YAML workflow files - approvers from auth-gateway roles, notifiers, escalation timers, delegation, audit log and callbacks
+    owner_team: Platform
+    primary: cei-prizmato
+    backup: aaquib-prizmato
+    jira_component: btwl-approval-router
+    confluence_space: BTWL
+    confluence_page: 'Approval Router: onboarding a workflow'
+    language: TypeScript (Fastify, Vitest)
+    paths:
+      - src/**
+      - test/**
+      - openapi.yaml
+      - config/workflows/**
+      - db/migrations/**
+      - examples/**
+      - .github/workflows/route-approval.yml
+
+  - name: btwl-console
+    description: 'Internal web console: requisitions, approvals inbox, order search and detail; one module per squad'
+    owner_team: Procurement & Spend
+    primary: shubham-prizmato
+    backup: aaquib-prizmato
+    jira_component: btwl-console
+    confluence_space: BTWL
+    confluence_page: Service catalog
+    language: TypeScript (React, Vite, Fastify session server, Vitest, Playwright)
+    paths: [src/**, server/**, test/**, e2e/**, specs/**, api-versions.json]

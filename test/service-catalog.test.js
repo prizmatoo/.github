@@ -68,8 +68,10 @@ describe('service-catalog.yaml', () => {
     const names = catalog.repos.map((r) => r.name).sort();
     assert.deepEqual(names, [
       '.github',
+      'btwl-approval-router',
       'btwl-auth-gateway',
       'btwl-billing-service',
+      'btwl-console',
       'btwl-inventory-service',
       'btwl-order-service',
       'btwl-pricing-lib',
