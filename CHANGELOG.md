@@ -52,3 +52,5 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - astral-sh/setup-uv 6.1.0 in `ci-python.yml`; @types/node 22.15.29 (BTWL-136).
 - June bumps: prettier 3.6.0, @types/node 22.15.33, gitleaks 8.27.2, astral-sh/setup-uv 6.3.0 (BTWL-157).
 - December bumps: typescript 5.9.3 (BTWL-264).
+- Node 22.22.0 in `.nvmrc` and wherever a workflow sets `node-version` itself (ci-python,
+  gitleaks, pr-check, xray-import); TypeScript repos pin the same in their `.nvmrc` (BTWL-324).
