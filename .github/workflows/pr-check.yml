@@ -39,7 +39,7 @@ jobs:
 
       - uses: actions/setup-node@v4.4.0
         with:
-          node-version: 22
+          node-version: 22.22.0
 
       # Event values go through env, never straight into the script text.
       - name: Check branch, title and Jira link
@@ -78,7 +78,7 @@ jobs:
 
       - uses: actions/setup-node@v4.4.0
         with:
-          node-version: 22
+          node-version: 22.22.0
 
       - name: List changed files
         env:

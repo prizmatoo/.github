@@ -9,6 +9,9 @@ import { ROOT, allSteps, isReusable, loadWorkflow, loadWorkflows } from './helpe
 
 const workflows = loadWorkflows();
 
+// The Node every BTWL repo pins in .nvmrc; workflows that set node-version themselves use the same.
+const NODE = readFileSync(join(ROOT, '.nvmrc'), 'utf8').trim();
+
 // GITHUB_TOKEN is for reading and for reporting checks, nothing else.
 const WRITABLE = new Set(['checks', 'statuses']);
 
@@ -27,6 +30,10 @@ function permissionProblems(perms) {
 describe('workflows', () => {
   it('finds workflows to check', () => {
     assert.ok(workflows.length > 0);
+  });
+
+  it('pins an exact Node version in .nvmrc', () => {
+    assert.match(NODE, /^\d+\.\d+\.\d+$/);
   });
 
   for (const { file, wf } of workflows) {
@@ -57,6 +64,18 @@ describe('workflows', () => {
         for (const step of allSteps(wf)) {
           if (!step.uses || step.uses.startsWith('./')) continue;
           assert.match(step.uses, /^[\w.-]+\/[\w./-]+@v\d+\.\d+\.\d+$/, step.uses);
+        }
+      });
+
+      it('sets up the Node pinned in .nvmrc', () => {
+        for (const step of allSteps(wf)) {
+          if (!step.uses?.startsWith('actions/setup-node@')) continue;
+          const version = step.with?.['node-version'];
+          if (version === undefined) {
+            assert.match(String(step.with?.['node-version-file']), /\.nvmrc$/, step.uses);
+          } else {
+            assert.equal(String(version), NODE, `${step.uses}: node-version`);
+          }
         }
       });
 
