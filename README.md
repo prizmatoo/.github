@@ -9,7 +9,7 @@ default pull request template, the CODEOWNERS template and the small Node script
 
 ## Run it locally
 
-Node 22 (`.nvmrc`) and the pnpm version pinned in `package.json` (`packageManager`), through
+Node 22.22.0 (`.nvmrc`) and the pnpm version pinned in `package.json` (`packageManager`), through
 corepack. A global pnpm of another major fails `make setup` on the lockfile.
 
 ```bash
@@ -147,7 +147,8 @@ floor.
 
 - [ ] `"packageManager": "pnpm@9.15.4"` in `package.json`, and `pnpm-lock.yaml` committed
 - [ ] `make setup` is `pnpm install --frozen-lockfile`
-- [ ] `.nvmrc` contains `22`
+- [ ] `.nvmrc` contains the org's Node pin, `22.22.0` today (the same in every repo, so CI and
+      laptops run one Node; Platform moves all repos together)
 - [ ] Makefile has `setup lint typecheck test build ci`; `make ci` passes locally in under 3 minutes
 - [ ] `.github/workflows/ci.yml` calls `ci-node.yml@main` as above
 

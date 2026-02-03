@@ -59,7 +59,7 @@ jobs:
 
       - uses: actions/setup-node@v4.4.0
         with:
-          node-version: 22
+          node-version: 22.22.0
 
       - name: Download the JUnit report
         uses: actions/download-artifact@v4.3.0
