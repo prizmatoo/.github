@@ -9,9 +9,9 @@
     "node": ">=22"
   },
   "devDependencies": {
-    "@types/node": "22.15.33",
-    "prettier": "3.6.0",
+    "@types/node": "22.19.8",
+    "prettier": "3.8.1",
     "typescript": "5.9.3",
-    "yaml": "2.8.0"
+    "yaml": "2.8.2"
   }
 }
