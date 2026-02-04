@@ -54,3 +54,5 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - December bumps: typescript 5.9.3 (BTWL-264).
 - Node 22.22.0 in `.nvmrc` and wherever a workflow sets `node-version` itself (ci-python,
   gitleaks, pr-check, xray-import); TypeScript repos pin the same in their `.nvmrc` (BTWL-324).
+- January bumps: prettier 3.8.1 (no formatting changes here), yaml 2.8.2, @types/node 22.19.8
+  (BTWL-329).
