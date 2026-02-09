@@ -21,7 +21,8 @@ repos:
     confluence_space: BTWL
     confluence_page: Engineering standards v1
     language: YAML (GitHub Actions), JavaScript
-    paths: [.github/**, scripts/**, test/**, service-catalog.yaml, CODEOWNERS.template]
+    paths:
+      [.github/**, .approvals/**, scripts/**, test/**, service-catalog.yaml, CODEOWNERS.template]
 
   - name: btwl-auth-gateway
     description: JWT issuance, JWKS, roles and token introspection

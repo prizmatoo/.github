@@ -1,0 +1,14 @@
+# Production deploys of BTWL services: one admin approves before the release workflow
+# (.github/workflows/release.yml) lets the deploy go ahead. Registered with approval-router as
+# prod-change; its copy is config/workflows/prod-change.yml in prizmatoo/btwl-approval-router.
+# Change both in the same week: `approval-router validate` warns while they differ.
+workflow: prod-change
+description: Production deploy of a BTWL service
+callback: none
+steps:
+  - name: platform-admin
+    when: true
+    approvers: { role: admin, min: 1 }
+    escalate_after: 4h
+    escalate_to: [hearth:#platform-oncall]
+    notify: [hearth:#platform-changes]
