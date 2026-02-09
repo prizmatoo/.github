@@ -42,4 +42,42 @@ describe('release.yml', () => {
   it('keeps contents read-only', () => {
     assert.deepEqual(wf.permissions, { contents: 'read' });
   });
+
+  it('says the tarball goes on the GitHub release, not to a package registry', () => {
+    assert.doesNotMatch(text, /GitHub Packages/);
+    assert.match(text, /attaches the tarball/);
+  });
+});
+
+describe('release.yml prod-change', () => {
+  const job = wf.jobs['prod-change'];
+
+  it("asks approval-router's prod-change workflow through route-approval.yml", () => {
+    assert.equal(
+      job?.uses,
+      'prizmatoo/btwl-approval-router/.github/workflows/route-approval.yml@main',
+    );
+    assert.equal(job?.with?.workflow, 'prod-change');
+  });
+
+  it('only for a release that goes to production, on a v* tag', () => {
+    assert.match(
+      String(job?.if),
+      /^inputs\.production && startsWith\(github\.ref, 'refs\/tags\/v'\)/,
+    );
+    assert.equal(wf.on.workflow_call.inputs.production.default, true);
+  });
+
+  it('sends the service and its version as the attributes', () => {
+    assert.match(String(job?.with?.attributes), /"service":"\{0\}","version":"\{1\}"/);
+    assert.match(String(job?.with?.attributes), /github\.event\.repository\.name/);
+  });
+
+  it("passes the repo's service client and never a write token", () => {
+    assert.deepEqual(Object.keys(job?.secrets ?? {}).sort(), [
+      'client-id',
+      'client-secret',
+      'router-token',
+    ]);
+  });
 });
