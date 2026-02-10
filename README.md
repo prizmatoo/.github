@@ -354,6 +354,25 @@ that file (OPS page "Release process"). GitHub Packages is not used: its npm reg
 accepts the org's own scope. The build and the tests still run in CI, so what the lead publishes is
 exactly what passed.
 
+**Production approval (BTWL-322).** A release that goes to production (`production: true`, the
+default; a library sets `false`) asks approval-router before anything is deployed: the
+`prod-change` job calls the router's `route-approval.yml` with workflow `prod-change` and the
+service and version as attributes, and waits. One admin approves
+(`approval-router decide AR-<n> approve`, see the runbook "production changes through
+approval-router" in btwl-approval-router); a rejection fails the run, and so does no decision
+within 240 minutes (the router escalates to `#platform-oncall` after 4 hours). The chat-thread
+approval is retired. The rules are this repo's `.approvals/prod-change.yml`; the router evaluates
+its registered copy, so a change to the file goes to both (onboarding page "Approval Router:
+onboarding a workflow").
+
+| input / secret                                 | default                          | meaning                                              |
+| ---------------------------------------------- | -------------------------------- | ---------------------------------------------------- |
+| `production`                                   | `true`                           | ask for `prod-change`; `false` for a library         |
+| `router-url`                                   | `https://approvals.btwl.example` | the router                                           |
+| `auth-gateway-url`                             | `https://auth.btwl.example`      | issues the repo's service token for the router       |
+| `approval-client-id`, `approval-client-secret` | –                                | the repo's service client (`svc:approvals:request`)  |
+| `router-token`                                 | `GITHUB_TOKEN`                   | read-only token for the private btwl-approval-router |
+
 ```yaml
 # .github/workflows/release.yml
 name: release
@@ -365,4 +384,7 @@ permissions:
 jobs:
   release:
     uses: prizmatoo/.github/.github/workflows/release.yml@main
+    secrets:
+      approval-client-id: ${{ secrets.APPROVAL_CLIENT_ID }}
+      approval-client-secret: ${{ secrets.APPROVAL_CLIENT_SECRET }}
 ```
