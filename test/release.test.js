@@ -68,9 +68,17 @@ describe('release.yml prod-change', () => {
     assert.equal(wf.on.workflow_call.inputs.production.default, true);
   });
 
-  it('sends the service and its version as the attributes', () => {
+  it('asks only after the build and pack passed', () => {
+    assert.equal(job?.needs, 'pack');
+  });
+
+  it('sends the service and the version the tag check produced as the attributes', () => {
     assert.match(String(job?.with?.attributes), /"service":"\{0\}","version":"\{1\}"/);
-    assert.match(String(job?.with?.attributes), /github\.event\.repository\.name/);
+    assert.match(
+      String(job?.with?.attributes),
+      /github\.event\.repository\.name, needs\.pack\.outputs\.version\)/,
+    );
+    assert.equal(wf.jobs.pack.outputs?.version, '${{ steps.version.outputs.version }}');
   });
 
   it("passes the repo's service client and never a write token", () => {
@@ -79,5 +87,19 @@ describe('release.yml prod-change', () => {
       'client-secret',
       'router-token',
     ]);
+  });
+
+  it('puts the request, who approved and when in the job summary', () => {
+    const approved = wf.jobs.approved;
+    assert.deepEqual(approved?.needs, ['pack', 'prod-change']);
+    const step = approved?.steps?.[0];
+    assert.match(step?.run ?? '', />> "\$GITHUB_STEP_SUMMARY"/);
+    for (const output of ['request-id', 'outcome', 'approver', 'decided-at']) {
+      assert.ok(
+        Object.values(step?.env ?? {}).includes(`\${{ needs.prod-change.outputs.${output} }}`),
+        output,
+      );
+    }
+    assert.doesNotMatch(step?.run ?? '', /\$\{\{/, 'outputs come through env');
   });
 });

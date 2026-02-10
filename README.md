@@ -355,9 +355,10 @@ accepts the org's own scope. The build and the tests still run in CI, so what th
 exactly what passed.
 
 **Production approval (BTWL-322).** A release that goes to production (`production: true`, the
-default; a library sets `false`) asks approval-router before anything is deployed: the
-`prod-change` job calls the router's `route-approval.yml` with workflow `prod-change` and the
-service and version as attributes, and waits. One admin approves
+default; a library sets `false`) asks approval-router before anything is deployed: once `pack`
+passed, the `prod-change` job calls the router's `route-approval.yml` with workflow `prod-change`
+and the service and version as attributes, and waits; the `approved` job then puts the request,
+who approved and when in the run's job summary, which the release task links. One admin approves
 (`approval-router decide AR-<n> approve`, see the runbook "production changes through
 approval-router" in btwl-approval-router); a rejection fails the run, and so does no decision
 within 240 minutes (the router escalates to `#platform-oncall` after 4 hours). The chat-thread
