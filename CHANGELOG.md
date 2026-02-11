@@ -42,6 +42,9 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - `btwl-approval-router` in `service-catalog.yaml`, with its first release 0.3.0 (BTWL-311).
 - `btwl-console` in `service-catalog.yaml`: the repo has existed since September 2025 but never had
   an entry (BTWL-311).
+- Production approvals: `.approvals/prod-change.yml` (one admin, escalation after 4h) and a
+  `prod-change` job in `release.yml` that asks approval-router through `route-approval.yml` and
+  waits; input `production` (`false` for a library) and the service client secrets (BTWL-322).
 
 ### Changed
 

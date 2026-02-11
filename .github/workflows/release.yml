@@ -1,12 +1,15 @@
-# Reusable release build for BTWL packages, run on a v<semver> tag.
+# Reusable release workflow for BTWL repos, run on a v<semver> tag.
 #
-# It checks the tag against package.json, runs make setup and make ci, packs the tagged version
+# pack: checks the tag against package.json, runs make setup and make ci, packs the tagged version
 # with npm pack and uploads the tarball together with the release notes cut from CHANGELOG.md.
+# prod-change: once pack passed, a release that goes to production asks approval-router (workflow
+# prod-change, one admin approves) and waits; a rejection or no decision in time fails the run.
+# approved: the request, who approved and when, in the run's job summary.
 #
 # It does NOT publish the package and does NOT create the GitHub release. Nothing on BTWL repos is
 # written by github-actions[bot] (no-bots rule), so GITHUB_TOKEN stays read-only here. The component
-# lead downloads the artifact, publishes it to GitHub Packages with their own token and creates the
-# release from release-notes.md (OPS "Release process v1").
+# lead downloads the artifact, creates the GitHub release from release-notes.md with their own token
+# and attaches the tarball to it; consumers vendor that file (OPS "Release process").
 name: release
 
 on:
@@ -20,9 +23,30 @@ on:
         description: Ref of prizmatoo/.github whose scripts check the tag and cut the notes
         type: string
         default: main
+      production:
+        description: The release is deployed to production and needs a prod-change approval; false for a library
+        type: boolean
+        default: true
+      router-url:
+        description: approval-router that approves production changes
+        type: string
+        default: https://approvals.btwl.example
+      auth-gateway-url:
+        description: auth-gateway that issues the repo's service token for the router
+        type: string
+        default: https://auth.btwl.example
     secrets:
       shared-ci-token:
         description: Read-only token for prizmatoo/.github (private repo); falls back to GITHUB_TOKEN
+        required: false
+      approval-client-id:
+        description: The repo's service client in auth-gateway (svc:approvals:request); needed when production is true
+        required: false
+      approval-client-secret:
+        description: Its secret
+        required: false
+      router-token:
+        description: Read-only token for prizmatoo/btwl-approval-router (private); falls back to GITHUB_TOKEN
         required: false
 
 permissions:
@@ -34,6 +58,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}
@@ -90,3 +116,47 @@ jobs:
           path: ${{ runner.temp }}/release/
           if-no-files-found: error
           retention-days: 30
+
+  # Every production deploy is approved in approval-router (BTWL-322); runbook
+  # docs/runbooks/prod-change-approvals.md in btwl-approval-router. Decided with
+  # `approval-router decide AR-<n> approve` by an admin. Asked only once pack passed, so nobody
+  # approves a version whose build then fails.
+  prod-change:
+    name: prod-change approval
+    needs: pack
+    if: inputs.production && startsWith(github.ref, 'refs/tags/v')
+    uses: prizmatoo/btwl-approval-router/.github/workflows/route-approval.yml@main
+    with:
+      workflow: prod-change
+      router-url: ${{ inputs.router-url }}
+      auth-gateway-url: ${{ inputs.auth-gateway-url }}
+      attributes: ${{ format('{{"service":"{0}","version":"{1}"}}', github.event.repository.name, needs.pack.outputs.version) }}
+    secrets:
+      client-id: ${{ secrets.approval-client-id }}
+      client-secret: ${{ secrets.approval-client-secret }}
+      router-token: ${{ secrets.router-token }}
+
+  # The release task's sign-off links this run: who approved, when, under which request.
+  approved:
+    name: approved for production
+    needs: [pack, prod-change]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Approval in the job summary
+        env:
+          SERVICE: ${{ github.event.repository.name }}
+          VERSION: ${{ needs.pack.outputs.version }}
+          REQUEST: ${{ needs.prod-change.outputs.request-id }}
+          OUTCOME: ${{ needs.prod-change.outputs.outcome }}
+          APPROVER: ${{ needs.prod-change.outputs.approver }}
+          DECIDED_AT: ${{ needs.prod-change.outputs.decided-at }}
+        run: |
+          echo "$SERVICE $VERSION: $REQUEST $OUTCOME by $APPROVER at $DECIDED_AT"
+          {
+            echo "### $SERVICE $VERSION approved for production"
+            echo
+            echo "| request | outcome | approved by | decided at (UTC) |"
+            echo "| --- | --- | --- | --- |"
+            echo "| $REQUEST | $OUTCOME | $APPROVER | $DECIDED_AT |"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -9,7 +9,7 @@ export const WORKFLOWS_DIR = join(ROOT, '.github', 'workflows');
 
 /**
  * @typedef {{ uses?: string, run?: string, with?: Record<string, unknown>, env?: Record<string, string>, if?: string, name?: string, id?: string }} Step
- * @typedef {{ 'runs-on'?: string, uses?: string, steps?: Step[], permissions?: Record<string, string> | string, if?: string, with?: Record<string, unknown>, needs?: string | string[] }} Job
+ * @typedef {{ 'runs-on'?: string, uses?: string, steps?: Step[], permissions?: Record<string, string> | string, if?: string, with?: Record<string, unknown>, secrets?: Record<string, string>, outputs?: Record<string, string>, needs?: string | string[] }} Job
  * @typedef {{ name?: string, on: Record<string, any>, permissions?: Record<string, string> | string, jobs: Record<string, Job> }} Workflow
  */
 
