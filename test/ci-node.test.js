@@ -46,6 +46,11 @@ describe('ci-node.yml', () => {
     assert.match(key, /hashFiles\(.*pnpm-lock\.yaml/);
   });
 
+  it('gives up on a stalled store download after 2 minutes, not the cache default of 10', () => {
+    const cache = steps.find((s) => s.uses?.startsWith('actions/cache@'));
+    assert.equal(Number(cache?.env?.SEGMENT_DOWNLOAD_TIMEOUT_MINS), 2);
+  });
+
   it('uploads coverage even when make ci fails', () => {
     const upload = steps.find((s) => s.name === 'Upload coverage');
     assert.ok(upload, 'coverage upload missing');
