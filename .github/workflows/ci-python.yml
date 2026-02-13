@@ -51,7 +51,11 @@ jobs:
         with:
           persist-credentials: false
 
+      # The uv cache uses the same cache client as ci-node's pnpm store: give up a stalled download
+      # after 2 minutes, not 10 (BTWL-347).
       - uses: astral-sh/setup-uv@v6.3.0
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 2
         with:
           enable-cache: true
           cache-dependency-glob: ${{ inputs.working-directory }}/uv.lock
