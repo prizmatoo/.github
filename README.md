@@ -92,6 +92,9 @@ floor, then the coverage directory is uploaded as the artifact `coverage-<repo>-
 The pnpm store is cached with `actions/cache`, keyed on the OS and the hash of `pnpm-lock.yaml`,
 falling back to the newest store for the OS. In the BTWL-38 spike this took installs from 94s
 (cold) to 21s (warm). A lockfile change misses the exact key once; the next run is warm again.
+A cache download that stalls is given up after 2 minutes (`SEGMENT_DOWNLOAD_TIMEOUT_MINS`) and the
+install runs cold; with the default of 10 minutes about one run in ten looked hung in "Cache pnpm
+store" (BTWL-347). ci-python's uv cache has the same limit.
 
 ```yaml
 # .github/workflows/ci.yml

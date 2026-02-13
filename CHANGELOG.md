@@ -59,3 +59,9 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   gitleaks, pr-check, xray-import); TypeScript repos pin the same in their `.nvmrc` (BTWL-324).
 - January bumps: prettier 3.8.1 (no formatting changes here), yaml 2.8.2, @types/node 22.19.8
   (BTWL-329).
+
+### Fixed
+
+- `ci-node.yml` and `ci-python.yml`: a stalled cache download (pnpm store, uv cache) is given up
+  after 2 minutes and the install runs cold, instead of waiting the cache's default 10 minutes
+  (BTWL-347).

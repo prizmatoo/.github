@@ -65,8 +65,12 @@ jobs:
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
+      # A stalled cache download gives up after 2 minutes and make setup installs cold (~1.5 min);
+      # the cache's default wait is 10 minutes, which looked like a hung install (BTWL-347).
       - name: Cache pnpm store
         uses: actions/cache@v4.2.3
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 2
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}

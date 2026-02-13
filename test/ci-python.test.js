@@ -18,6 +18,11 @@ describe('ci-python.yml', () => {
     assert.ok(runIndex('uv python install') >= 0);
   });
 
+  it('gives up on a stalled uv cache download after 2 minutes, like ci-node (BTWL-347)', () => {
+    const uv = steps.find((s) => s.uses?.startsWith('astral-sh/setup-uv@'));
+    assert.equal(Number(uv?.env?.SEGMENT_DOWNLOAD_TIMEOUT_MINS), 2);
+  });
+
   it('checks pyproject.toml, uv.lock and .python-version before anything is installed', () => {
     const check = steps.findIndex((s) => s.name === 'Check the Python project');
     assert.ok(check >= 0 && check < runIndex('uv python install'));
