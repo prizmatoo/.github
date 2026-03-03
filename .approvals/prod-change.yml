@@ -9,6 +9,6 @@ steps:
   - name: platform-admin
     when: true
     approvers: { role: admin, min: 1 }
-    escalate_after: 4h
+    escalation: platform-4h@1
     escalate_to: [hearth:#platform-oncall]
     notify: [hearth:#platform-changes]

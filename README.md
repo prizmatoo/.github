@@ -364,7 +364,7 @@ and the service and version as attributes, and waits; the `approved` job then pu
 who approved and when in the run's job summary, which the release task links. One admin approves
 (`approval-router decide AR-<n> approve`, see the runbook "production changes through
 approval-router" in btwl-approval-router); a rejection fails the run, and so does no decision
-within 240 minutes (the router escalates to `#platform-oncall` after 4 hours). The chat-thread
+within 240 minutes (the router escalates to `#platform-oncall` after 4 business hours, policy `platform-4h@1`). The chat-thread
 approval is retired. The rules are this repo's `.approvals/prod-change.yml`; the router evaluates
 its registered copy, so a change to the file goes to both (onboarding page "Approval Router:
 onboarding a workflow").
