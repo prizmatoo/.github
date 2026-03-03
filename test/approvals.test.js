@@ -60,7 +60,12 @@ describe('prod-change.yml', () => {
   });
 
   it('escalates to the Platform on-call channel', () => {
-    assert.equal(wf.steps[0].escalate_after, '4h');
+    assert.equal(
+      wf.steps[0].escalation,
+      'platform-4h@1',
+      '4 business hours, US federal holidays off',
+    );
+    assert.equal(wf.steps[0].escalate_after, undefined, 'the policy replaces escalate_after');
     assert.deepEqual(wf.steps[0].escalate_to, ['hearth:#platform-oncall']);
     assert.deepEqual(wf.steps[0].notify, ['hearth:#platform-changes']);
   });

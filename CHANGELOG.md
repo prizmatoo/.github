@@ -59,6 +59,8 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   gitleaks, pr-check, xray-import); TypeScript repos pin the same in their `.nvmrc` (BTWL-324).
 - January bumps: prettier 3.8.1 (no formatting changes here), yaml 2.8.2, @types/node 22.19.8
   (BTWL-329).
+- `.approvals/prod-change.yml` escalates on approval-router's `platform-4h@1` policy (4 business
+  hours, Central, US federal holidays off) instead of 4 wall-clock hours, as registered (BTWL-318).
 
 ### Fixed
 
