@@ -61,6 +61,8 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   (BTWL-329).
 - `.approvals/prod-change.yml` escalates on approval-router's `platform-4h@1` policy (4 business
   hours, Central, US federal holidays off) instead of 4 wall-clock hours, as registered (BTWL-318).
+- `.gitleaks.toml`: each lockfile allowlist entry anchored to its one file, with a comment
+  (BTWL-398).
 
 ### Fixed
 

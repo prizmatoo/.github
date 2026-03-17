@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { annotation, main, parseReport } from '../scripts/gitleaks-annotate.js';
-import { allSteps, loadWorkflow } from './helpers.js';
+import { ROOT, allSteps, loadWorkflow } from './helpers.js';
 
 // Shape of a gitleaks 8.x JSON report entry, run with --redact.
 const finding = {
@@ -91,5 +91,31 @@ describe('gitleaks.yml', () => {
   it('checks out full history so the PR range can be scanned', () => {
     const checkout = steps.find((s) => s.uses?.startsWith('actions/checkout@') && !s.with?.path);
     assert.equal(checkout?.with?.['fetch-depth'], 0);
+  });
+});
+
+// This repo's own allowlist (BTWL-398): every entry scoped to one file and saying why.
+describe('.gitleaks.toml', () => {
+  const lines = readFileSync(join(ROOT, '.gitleaks.toml'), 'utf8').split('\n');
+  const start = lines.findIndex((l) => /^paths = \[/.test(l));
+  const end = lines.findIndex((l, i) => i > start && l.trim() === ']');
+  const entries = lines
+    .map((line, index) => ({ line: line.trim(), index }))
+    .filter((e) => e.index > start && e.index < end && e.line.startsWith("'''"));
+
+  it('has no global allowlist other than paths', () => {
+    assert.ok(start >= 0 && end > start, 'paths = [ ... ] missing');
+    assert.doesNotMatch(lines.join('\n'), /^(regexes|stopwords|commits) = /m);
+  });
+
+  it('anchors every path to one file', () => {
+    assert.ok(entries.length > 0);
+    for (const { line } of entries) assert.match(line, /^'''\^[^*]+\$''',$/, line);
+  });
+
+  it('says above every entry why it is allowlisted', () => {
+    for (const { line, index } of entries) {
+      assert.match(lines[index - 1].trim(), /^# /, `no comment above ${line}`);
+    }
   });
 });
