@@ -4,5 +4,12 @@
 useDefault = true
 
 [allowlist]
-description = "Generated files that never hold secrets"
-paths = ['''pnpm-lock\.yaml''', '''uv\.lock''']
+description = "Lockfile hashes"
+paths = [
+  # pnpm-lock.yaml integrity hashes (sha512) are not secrets. Anchored to the root lockfile only,
+  # so a lockfile copied anywhere else is scanned (reviewed 2026-03-17, BTWL-398)
+  '''^pnpm-lock\.yaml$''',
+  # uv.lock of the Python sample that ci-python-sample runs: package hashes (sha256), not secrets.
+  # Anchored to that file only (reviewed 2026-03-17, BTWL-398)
+  '''^test/fixtures/python-sample/uv\.lock$''',
+]
