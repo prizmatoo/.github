@@ -63,6 +63,7 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   hours, Central, US federal holidays off) instead of 4 wall-clock hours, as registered (BTWL-318).
 - `.gitleaks.toml`: each lockfile allowlist entry anchored to its one file, with a comment
   (BTWL-398).
+- March bumps: @types/node 22.19.15; prettier, yaml and typescript have nothing newer (BTWL-399).
 
 ### Fixed
 
