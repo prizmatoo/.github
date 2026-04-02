@@ -1,10 +1,17 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { evaluate, formatTable, main, readSummary } from '../scripts/coverage-floor.js';
+import {
+  compare,
+  evaluate,
+  formatStepSummary,
+  formatTable,
+  main,
+  readSummary,
+} from '../scripts/coverage-floor.js';
 
 /**
  * istanbul json-summary with the given per-file line counts.
@@ -139,7 +146,7 @@ describe('coverage.py summary', () => {
   });
 
   it('fails below the floor with the per-file table, lowest first', () => {
-    const { code, out } = run(() => main([summaryFile(coveragePy)]));
+    const { code, out } = run(() => main([summaryFile(coveragePy)], {}));
     assert.equal(code, 1);
     const table = out.split('\n').slice(1);
     assert.match(table[1], /^src\/btwl_inventory\/stock\.py\s+75\.00  150\/200$/);
@@ -161,7 +168,7 @@ describe('formatTable', () => {
 
 describe('main', () => {
   it('fails below the floor and prints the per-file summary', () => {
-    const { code, out } = run(() => main([summaryFile(below)]));
+    const { code, out } = run(() => main([summaryFile(below)], {}));
     assert.equal(code, 1);
     // "%" is escaped as %25 in workflow commands; the log shows it as "%".
     assert.match(out, /::error title=coverage::line coverage 79\.4%25 is below the 80%25 floor/);
@@ -169,29 +176,132 @@ describe('main', () => {
   });
 
   it('passes above the floor', () => {
-    const { code, out } = run(() => main([summaryFile(istanbul({ 'src/a.ts': [95, 100] }))]));
+    const { code, out } = run(() => main([summaryFile(istanbul({ 'src/a.ts': [95, 100] }))], {}));
     assert.equal(code, 0);
     assert.match(out, /coverage: 95% lines \(floor 80%\)/);
   });
 
   it('takes the floor from --floor', () => {
-    assert.equal(run(() => main([summaryFile(below), '--floor', '75'])).code, 0);
+    assert.equal(run(() => main([summaryFile(below), '--floor', '75'], {})).code, 0);
   });
 
   it('fails when the summary file does not exist, with the reporter hint', () => {
-    const { code, out } = run(() => main(['/nonexistent/coverage-summary.json']));
+    const { code, out } = run(() => main(['/nonexistent/coverage-summary.json'], {}));
     assert.equal(code, 1);
     assert.match(out, /::error title=coverage::no coverage summary at \/nonexistent/);
     assert.match(out, /json-summary/);
   });
 
   it('skips the check entirely with --floor 0', () => {
-    const { code, out } = run(() => main(['/nonexistent/coverage-summary.json', '--floor', '0']));
+    const { code, out } = run(() =>
+      main(['/nonexistent/coverage-summary.json', '--floor', '0'], {}),
+    );
     assert.equal(code, 0);
     assert.match(out, /floor disabled/);
   });
 
   it('rejects a missing summary argument', () => {
-    assert.equal(main([]), 2);
+    assert.equal(main([], {}), 2);
+  });
+});
+
+// BTWL-424: the delta against main in the job summary.
+const WS = '/home/runner/work/btwl-order-service/btwl-order-service';
+const mainBuild = istanbul({
+  [`${WS}/src/orders/service.ts`]: [450, 500],
+  [`${WS}/src/orders/routes.ts`]: [400, 500],
+  [`${WS}/src/orders/quote.ts`]: [90, 100],
+});
+const prBuild = istanbul({
+  [`${WS}/src/orders/service.ts`]: [450, 500],
+  [`${WS}/src/orders/routes.ts`]: [380, 500],
+  [`${WS}/src/orders/quote.ts`]: [95, 100],
+});
+
+describe('compare', () => {
+  const c = compare(
+    readSummary(JSON.stringify(prBuild)),
+    readSummary(JSON.stringify(mainBuild)),
+    WS,
+  );
+
+  it('gives the total and its change against main', () => {
+    assert.equal(c.base, 85.45);
+    assert.equal(c.pct, 84.09);
+    assert.equal(Math.round(c.delta * 100) / 100, -1.36);
+  });
+
+  it('lists the files whose coverage moved, the largest drop first, relative to the repo', () => {
+    assert.deepEqual(
+      c.files.map((f) => [f.file, f.base, f.pct]),
+      [
+        ['src/orders/routes.ts', 80, 76],
+        ['src/orders/quote.ts', 90, 95],
+      ],
+    );
+  });
+});
+
+describe('formatStepSummary', () => {
+  const summary = readSummary(JSON.stringify(prBuild));
+
+  it('shows this build, main, the change and the floor', () => {
+    const comparison = compare(summary, readSummary(JSON.stringify(mainBuild)), WS);
+    const md = formatStepSummary({ summary, floor: 80, ok: true, comparison });
+    assert.match(md, /^### Coverage$/m);
+    assert.match(md, /^\| lines \| 84\.09% \| 85\.45% \| -1\.36 \| 80% \|$/m);
+    assert.match(md, /^\| `src\/orders\/routes\.ts` \| 80\.00% \| 76\.00% \| -4\.00 \|$/m);
+    assert.match(md, /^\| `src\/orders\/quote\.ts` \| 90\.00% \| 95\.00% \| \+5\.00 \|$/m);
+  });
+
+  it('says so when there is no main build to compare with', () => {
+    const md = formatStepSummary({ summary, floor: 80, ok: true });
+    assert.match(md, /^\| lines \| 84\.09% \| – \| – \| 80% \|$/m);
+    assert.match(md, /No coverage summary from a main build/);
+  });
+
+  it('marks a build below the floor', () => {
+    const md = formatStepSummary({
+      summary: readSummary(JSON.stringify(below)),
+      floor: 80,
+      ok: false,
+    });
+    assert.match(md, /\*\*Below the 80% floor\.\*\*/);
+  });
+});
+
+describe('main, in Actions', () => {
+  /** @param {string} name */
+  const jobSummary = (name) => join(mkdtempSync(join(tmpdir(), 'step-summary-')), name);
+
+  it('writes the job summary with the delta against --base', () => {
+    const file = jobSummary('summary.md');
+    const args = [summaryFile(prBuild), '--base', summaryFile(mainBuild)];
+    assert.equal(run(() => main(args, { GITHUB_STEP_SUMMARY: file })).code, 0);
+    assert.match(readFileSync(file, 'utf8'), /\| lines \| 84\.09% \| 85\.45% \| -1\.36 \| 80% \|/);
+  });
+
+  it('still fails below the floor, and the summary says so', () => {
+    const file = jobSummary('summary.md');
+    assert.equal(run(() => main([summaryFile(below)], { GITHUB_STEP_SUMMARY: file })).code, 1);
+    assert.match(readFileSync(file, 'utf8'), /Below the 80% floor/);
+  });
+
+  it('ignores a --base that is missing or unreadable', () => {
+    const file = jobSummary('summary.md');
+    const broken = join(mkdtempSync(join(tmpdir(), 'coverage-')), 'broken.json');
+    writeFileSync(broken, 'not json');
+    for (const base of ['/nonexistent/coverage-summary.json', broken]) {
+      const args = [summaryFile(prBuild), '--base', base];
+      assert.equal(run(() => main(args, { GITHUB_STEP_SUMMARY: file })).code, 0);
+    }
+    assert.match(readFileSync(file, 'utf8'), /No coverage summary from a main build/);
+  });
+
+  it('never fails because the job summary cannot be written', () => {
+    const env = { GITHUB_STEP_SUMMARY: '/nonexistent/dir/summary.md' };
+    const { code, out } = run(() => main([summaryFile(prBuild)], env));
+    assert.equal(code, 0);
+    assert.match(out, /job summary not written/);
   });
 });

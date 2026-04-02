@@ -2,13 +2,17 @@
 // Coverage floor: fail when total line coverage is below the floor (default 80%) and print the
 // per-file summary, lowest first, so the PR author sees where coverage dropped.
 //
-//   node scripts/coverage-floor.js <summary> [--floor 80]
+//   node scripts/coverage-floor.js <summary> [--floor 80] [--base <main's summary>]
 //
 // <summary> is one of
 //   - istanbul json-summary (vitest / jest "json-summary" reporter): coverage/coverage-summary.json
 //   - coverage.py JSON (pytest --cov-report=json): coverage.json
 //   - lcov (any tool; node --test --test-reporter=lcov): *.info
-import { existsSync, readFileSync } from 'node:fs';
+//
+// In Actions ($GITHUB_STEP_SUMMARY set) it also writes the total, the delta against --base (a
+// summary of the same format from a main build) and the files whose coverage moved to the job
+// summary (BTWL-424). That is the check's own output: nothing is posted on the PR.
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 
 import { errorCommand, isMain } from './lib/actions.js';
 
@@ -106,15 +110,138 @@ export function evaluate(summary, floor) {
 }
 
 /**
+ * A file's path as the job summary shows it: istanbul writes absolute paths, the others relative.
+ * @param {string} file
+ * @param {string} cwd
+ */
+function relativeTo(file, cwd) {
+  return file.startsWith(`${cwd}/`) ? file.slice(cwd.length + 1) : file;
+}
+
+/**
+ * @typedef {{ file: string, pct: number, base: number, delta: number }} FileDelta
+ * @typedef {{ pct: number, base: number, delta: number, files: FileDelta[] }} Comparison
+ */
+
+/**
+ * Total and per-file line coverage of this build against a main build's summary. Files whose
+ * coverage moved come first by the largest drop.
+ * @param {Summary} head
+ * @param {Summary} base
+ * @param {string} [cwd]
+ * @returns {Comparison}
+ */
+export function compare(head, base, cwd = process.cwd()) {
+  const before = new Map(base.files.map((f) => [relativeTo(f.file, cwd), f.pct]));
+  /** @type {FileDelta[]} */
+  const files = [];
+  for (const f of head.files) {
+    const file = relativeTo(f.file, cwd);
+    const was = before.get(file);
+    if (was === undefined) continue;
+    const delta = f.pct - was;
+    if (Math.abs(delta) >= 0.005) files.push({ file, pct: f.pct, base: was, delta });
+  }
+  files.sort((a, b) => a.delta - b.delta || a.file.localeCompare(b.file));
+  return { pct: head.pct, base: base.pct, delta: head.pct - base.pct, files };
+}
+
+/** @param {number} n */
+const pct = (n) => `${(Math.floor(n * 100) / 100).toFixed(2)}%`;
+/** @param {number} n */
+const signed = (n) => `${n >= 0 ? '+' : '-'}${Math.abs(n).toFixed(2)}`;
+
+const MAX_FILES = 25;
+
+/**
+ * Markdown for the job summary.
+ * @param {{ summary: Summary, floor: number, ok: boolean, comparison?: Comparison }} result
+ * @returns {string}
+ */
+export function formatStepSummary({ summary, floor, ok, comparison }) {
+  const lines = ['### Coverage', ''];
+  lines.push('|  | this build | main | change | floor |', '| --- | ---: | ---: | ---: | ---: |');
+  const main = comparison ? pct(comparison.base) : '–';
+  const change = comparison ? signed(comparison.delta) : '–';
+  lines.push(`| lines | ${pct(summary.pct)} | ${main} | ${change} | ${floor}% |`, '');
+  lines.push(ok ? `At or above the ${floor}% floor.` : `**Below the ${floor}% floor.**`, '');
+  if (!comparison) {
+    lines.push('No coverage summary from a main build to compare with.', '');
+    return lines.join('\n');
+  }
+  if (comparison.files.length === 0) {
+    lines.push('No file changed its line coverage.', '');
+    return lines.join('\n');
+  }
+  const shown = comparison.files.slice(0, MAX_FILES);
+  lines.push('| file | main | this build | change |', '| --- | ---: | ---: | ---: |');
+  for (const f of shown) {
+    lines.push(`| \`${f.file}\` | ${pct(f.base)} | ${pct(f.pct)} | ${signed(f.delta)} |`);
+  }
+  if (comparison.files.length > shown.length) {
+    lines.push('', `${comparison.files.length - shown.length} more files changed.`);
+  }
+  lines.push('');
+  return lines.join('\n');
+}
+
+/**
+ * The summary of a main build, or undefined when there is none or it cannot be read.
+ * @param {string | undefined} path
+ * @returns {Summary | undefined}
+ */
+function readBase(path) {
+  if (!path || !existsSync(path)) return undefined;
+  try {
+    return readSummary(readFileSync(path, 'utf8'));
+  } catch (err) {
+    console.log(
+      `coverage: main's summary at ${path} not used (${/** @type {Error} */ (err).message})`,
+    );
+    return undefined;
+  }
+}
+
+/**
+ * Appends to the job summary; a summary that cannot be written never changes the check's result.
+ * @param {string | undefined} file
+ * @param {string} markdown
+ */
+function writeStepSummary(file, markdown) {
+  if (!file) return;
+  try {
+    appendFileSync(file, markdown);
+  } catch (err) {
+    console.log(`coverage: job summary not written (${/** @type {Error} */ (err).message})`);
+  }
+}
+
+/**
  * @param {string[]} argv
+ * @returns {{ path?: string, options: Record<string, string> }}
+ */
+function parseArgs(argv) {
+  /** @type {Record<string, string>} */
+  const options = {};
+  /** @type {string[]} */
+  const positional = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i].startsWith('--')) options[argv[i].slice(2)] = argv[++i] ?? '';
+    else positional.push(argv[i]);
+  }
+  return { path: positional[0], options };
+}
+
+/**
+ * @param {string[]} argv
+ * @param {NodeJS.ProcessEnv} env
  * @returns {number} exit code
  */
-export function main(argv = process.argv.slice(2)) {
-  const floorAt = argv.indexOf('--floor');
-  const floor = floorAt >= 0 ? Number(argv[floorAt + 1]) : 80;
-  const path = argv.find((a, i) => !a.startsWith('--') && (floorAt < 0 || i !== floorAt + 1));
+export function main(argv = process.argv.slice(2), env = process.env) {
+  const { path, options } = parseArgs(argv);
+  const floor = options.floor !== undefined ? Number(options.floor) : 80;
   if (!path || Number.isNaN(floor)) {
-    console.error('usage: coverage-floor.js <summary> [--floor 80]');
+    console.error('usage: coverage-floor.js <summary> [--floor 80] [--base <summary>]');
     return 2;
   }
   if (floor === 0) {
@@ -128,6 +255,9 @@ export function main(argv = process.argv.slice(2)) {
   }
   const summary = readSummary(readFileSync(path, 'utf8'));
   const { ok, pct } = evaluate(summary, floor);
+  const base = readBase(options.base);
+  const comparison = base ? compare(summary, base) : undefined;
+  writeStepSummary(env.GITHUB_STEP_SUMMARY, formatStepSummary({ summary, floor, ok, comparison }));
   if (ok) {
     console.log(`coverage: ${pct}% lines (floor ${floor}%)`);
     return 0;
