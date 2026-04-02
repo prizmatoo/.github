@@ -154,8 +154,9 @@ const signed = (n) => `${n >= 0 ? '+' : '-'}${Math.abs(n).toFixed(2)}`;
 const MAX_FILES = 25;
 
 /**
- * Markdown for the job summary.
- * @param {{ summary: Summary, floor: number, ok: boolean, comparison?: Comparison }} result
+ * Markdown for the job summary. `comparison` is undefined when nothing was to be compared (a main
+ * build) and null when a main build's summary was wanted but there was none.
+ * @param {{ summary: Summary, floor: number, ok: boolean, comparison?: Comparison | null }} result
  * @returns {string}
  */
 export function formatStepSummary({ summary, floor, ok, comparison }) {
@@ -165,10 +166,10 @@ export function formatStepSummary({ summary, floor, ok, comparison }) {
   const change = comparison ? signed(comparison.delta) : '–';
   lines.push(`| lines | ${pct(summary.pct)} | ${main} | ${change} | ${floor}% |`, '');
   lines.push(ok ? `At or above the ${floor}% floor.` : `**Below the ${floor}% floor.**`, '');
-  if (!comparison) {
+  if (comparison === null) {
     lines.push('No coverage summary from a main build to compare with.', '');
-    return lines.join('\n');
   }
+  if (!comparison) return lines.join('\n');
   if (comparison.files.length === 0) {
     lines.push('No file changed its line coverage.', '');
     return lines.join('\n');
@@ -256,7 +257,8 @@ export function main(argv = process.argv.slice(2), env = process.env) {
   const summary = readSummary(readFileSync(path, 'utf8'));
   const { ok, pct } = evaluate(summary, floor);
   const base = readBase(options.base);
-  const comparison = base ? compare(summary, base) : undefined;
+  // An empty --base (a main build) compares with nothing.
+  const comparison = !options.base ? undefined : base ? compare(summary, base) : null;
   writeStepSummary(env.GITHUB_STEP_SUMMARY, formatStepSummary({ summary, floor, ok, comparison }));
   if (ok) {
     console.log(`coverage: ${pct}% lines (floor ${floor}%)`);

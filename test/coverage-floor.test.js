@@ -255,9 +255,15 @@ describe('formatStepSummary', () => {
   });
 
   it('says so when there is no main build to compare with', () => {
-    const md = formatStepSummary({ summary, floor: 80, ok: true });
+    const md = formatStepSummary({ summary, floor: 80, ok: true, comparison: null });
     assert.match(md, /^\| lines \| 84\.09% \| – \| – \| 80% \|$/m);
     assert.match(md, /No coverage summary from a main build/);
+  });
+
+  it('shows only the total for a build that compares with nothing (main itself)', () => {
+    const md = formatStepSummary({ summary, floor: 80, ok: true });
+    assert.match(md, /^\| lines \| 84\.09% \| – \| – \| 80% \|$/m);
+    assert.doesNotMatch(md, /No coverage summary|\| file \|/);
   });
 
   it('marks a build below the floor', () => {
@@ -296,6 +302,13 @@ describe('main, in Actions', () => {
       assert.equal(run(() => main(args, { GITHUB_STEP_SUMMARY: file })).code, 0);
     }
     assert.match(readFileSync(file, 'utf8'), /No coverage summary from a main build/);
+  });
+
+  it('compares with nothing when --base is empty (a main build)', () => {
+    const file = jobSummary('summary.md');
+    const args = [summaryFile(prBuild), '--floor', '80', '--base', ''];
+    assert.equal(run(() => main(args, { GITHUB_STEP_SUMMARY: file })).code, 0);
+    assert.doesNotMatch(readFileSync(file, 'utf8'), /No coverage summary/);
   });
 
   it('never fails because the job summary cannot be written', () => {

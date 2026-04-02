@@ -103,11 +103,42 @@ jobs:
         with:
           node-version: 22.22.0
 
+      # Main's coverage for the change in the job summary, as in ci-node.yml (BTWL-424).
+      - name: Restore main's coverage summary
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/cache/restore@v4.2.3
+        with:
+          path: .coverage-main
+          key: coverage-main-${{ inputs.working-directory }}-${{ github.event.pull_request.base.sha }}
+          restore-keys: |
+            coverage-main-${{ inputs.working-directory }}-
+
       - name: Coverage floor
         env:
           SUMMARY: ${{ inputs.coverage-summary }}
           FLOOR: ${{ inputs.coverage-floor }}
-        run: node "$GITHUB_WORKSPACE/.shared-ci/scripts/coverage-floor.js" "$SUMMARY" --floor "$FLOOR"
+          BASE: ${{ github.event_name == 'pull_request' && format('{0}/.coverage-main/summary', github.workspace) || '' }}
+        run: node "$GITHUB_WORKSPACE/.shared-ci/scripts/coverage-floor.js" "$SUMMARY" --floor "$FLOOR" --base "$BASE"
+
+      - name: Keep main's coverage summary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          SUMMARY: ${{ inputs.coverage-summary }}
+        run: |
+          if [ -f "$SUMMARY" ]; then
+            mkdir -p "$GITHUB_WORKSPACE/.coverage-main"
+            cp "$SUMMARY" "$GITHUB_WORKSPACE/.coverage-main/summary"
+          fi
+
+      - name: Save main's coverage summary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        uses: actions/cache/save@v4.2.3
+        with:
+          path: .coverage-main
+          key: coverage-main-${{ inputs.working-directory }}-${{ github.sha }}
 
       - name: Upload coverage
         if: always()
