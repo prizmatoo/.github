@@ -146,6 +146,15 @@ Generated code (OpenAPI clients and the like) should not count: exclude it in th
 config (`coverage.exclude` in Vitest, `coveragePathIgnorePatterns` in Jest), not by lowering the
 floor.
 
+**Coverage in the job summary (BTWL-424).** The same step writes a coverage table to the run's
+job summary (the `make ci` check's summary page): line coverage of this build, of main, the
+change and the floor, then the files whose coverage moved, the largest drop first. Main builds
+keep their coverage summary in the Actions cache (`coverage-main-<directory>-<sha>`); a PR build
+restores the one of its base commit, or the newest main one, and passes it as `--base`. Nothing is
+posted on the PR (no bot output on BTWL repos): open the check's details to read it. The cache
+never fails a build; without a main summary the change column stays empty. The floor is
+unchanged.
+
 **Repo owner checklist** (from the pnpm vs npm spike, BTWL-38):
 
 - [ ] `"packageManager": "pnpm@9.15.4"` in `package.json`, and `pnpm-lock.yaml` committed
