@@ -3,6 +3,7 @@
 // per-file summary, lowest first, so the PR author sees where coverage dropped.
 //
 //   node scripts/coverage-floor.js <summary> [--floor 80] [--base <main's summary>]
+//     [--base-key <cache key it came from>] [--pr-base <the PR's base sha>]
 //
 // <summary> is one of
 //   - istanbul json-summary (vitest / jest "json-summary" reporter): coverage/coverage-summary.json
@@ -119,13 +120,14 @@ function relativeTo(file, cwd) {
 }
 
 /**
- * @typedef {{ file: string, pct: number, base: number, delta: number }} FileDelta
+ * A file new in this build has no main value and no change (base and delta null).
+ * @typedef {{ file: string, pct: number, base: number | null, delta: number | null }} FileDelta
  * @typedef {{ pct: number, base: number, delta: number, files: FileDelta[] }} Comparison
  */
 
 /**
  * Total and per-file line coverage of this build against a main build's summary. Files whose
- * coverage moved come first by the largest drop.
+ * coverage moved come first by the largest drop, then files main does not have, lowest first.
  * @param {Summary} head
  * @param {Summary} base
  * @param {string} [cwd]
@@ -134,16 +136,40 @@ function relativeTo(file, cwd) {
 export function compare(head, base, cwd = process.cwd()) {
   const before = new Map(base.files.map((f) => [relativeTo(f.file, cwd), f.pct]));
   /** @type {FileDelta[]} */
-  const files = [];
+  const moved = [];
+  /** @type {FileDelta[]} */
+  const added = [];
   for (const f of head.files) {
     const file = relativeTo(f.file, cwd);
     const was = before.get(file);
-    if (was === undefined) continue;
+    if (was === undefined) {
+      added.push({ file, pct: f.pct, base: null, delta: null });
+      continue;
+    }
     const delta = f.pct - was;
-    if (Math.abs(delta) >= 0.005) files.push({ file, pct: f.pct, base: was, delta });
+    if (Math.abs(delta) >= 0.005) moved.push({ file, pct: f.pct, base: was, delta });
   }
-  files.sort((a, b) => a.delta - b.delta || a.file.localeCompare(b.file));
-  return { pct: head.pct, base: base.pct, delta: head.pct - base.pct, files };
+  moved.sort((a, b) => Number(a.delta) - Number(b.delta) || a.file.localeCompare(b.file));
+  added.sort((a, b) => a.pct - b.pct || a.file.localeCompare(b.file));
+  return { pct: head.pct, base: base.pct, delta: head.pct - base.pct, files: [...moved, ...added] };
+}
+
+/**
+ * Which main build the change is against: the commit in the restored cache key
+ * (coverage-main-<directory>-<sha>), and whether that is the PR's base.
+ * @param {string | undefined} key
+ * @param {string | undefined} prBase
+ * @returns {string}
+ */
+export function describeBase(key, prBase) {
+  const sha = /([0-9a-f]{40})$/.exec(key ?? '')?.[1];
+  if (!sha) return 'Compared with a main build.';
+  const short = (/** @type {string} */ s) => `\`${s.slice(0, 7)}\``;
+  if (!prBase || sha === prBase) return `Compared with main at ${short(sha)}, this PR's base.`;
+  return (
+    `Compared with main at ${short(sha)}, the newest main build with coverage: this PR's base ` +
+    `${short(prBase)} has none, so the change includes whatever merged in between.`
+  );
 }
 
 /** @param {number} n */
@@ -155,11 +181,12 @@ const MAX_FILES = 25;
 
 /**
  * Markdown for the job summary. `comparison` is undefined when nothing was to be compared (a main
- * build) and null when a main build's summary was wanted but there was none.
- * @param {{ summary: Summary, floor: number, ok: boolean, comparison?: Comparison | null }} result
+ * build) and null when a main build's summary was wanted but there was none; `against` says which
+ * main build it is (describeBase).
+ * @param {{ summary: Summary, floor: number, ok: boolean, comparison?: Comparison | null, against?: string }} result
  * @returns {string}
  */
-export function formatStepSummary({ summary, floor, ok, comparison }) {
+export function formatStepSummary({ summary, floor, ok, comparison, against }) {
   const lines = ['### Coverage', ''];
   lines.push('|  | this build | main | change | floor |', '| --- | ---: | ---: | ---: | ---: |');
   const main = comparison ? pct(comparison.base) : '–';
@@ -170,6 +197,7 @@ export function formatStepSummary({ summary, floor, ok, comparison }) {
     lines.push('No coverage summary from a main build to compare with.', '');
   }
   if (!comparison) return lines.join('\n');
+  lines.push(against ?? 'Compared with a main build.', '');
   if (comparison.files.length === 0) {
     lines.push('No file changed its line coverage.', '');
     return lines.join('\n');
@@ -177,7 +205,9 @@ export function formatStepSummary({ summary, floor, ok, comparison }) {
   const shown = comparison.files.slice(0, MAX_FILES);
   lines.push('| file | main | this build | change |', '| --- | ---: | ---: | ---: |');
   for (const f of shown) {
-    lines.push(`| \`${f.file}\` | ${pct(f.base)} | ${pct(f.pct)} | ${signed(f.delta)} |`);
+    const was = f.base === null ? '–' : pct(f.base);
+    const moved = f.delta === null ? 'new' : signed(f.delta);
+    lines.push(`| \`${f.file}\` | ${was} | ${pct(f.pct)} | ${moved} |`);
   }
   if (comparison.files.length > shown.length) {
     lines.push('', `${comparison.files.length - shown.length} more files changed.`);
@@ -242,7 +272,9 @@ export function main(argv = process.argv.slice(2), env = process.env) {
   const { path, options } = parseArgs(argv);
   const floor = options.floor !== undefined ? Number(options.floor) : 80;
   if (!path || Number.isNaN(floor)) {
-    console.error('usage: coverage-floor.js <summary> [--floor 80] [--base <summary>]');
+    console.error(
+      'usage: coverage-floor.js <summary> [--floor 80] [--base <summary> [--base-key <key>] [--pr-base <sha>]]',
+    );
     return 2;
   }
   if (floor === 0) {
@@ -259,7 +291,11 @@ export function main(argv = process.argv.slice(2), env = process.env) {
   const base = readBase(options.base);
   // An empty --base (a main build) compares with nothing.
   const comparison = !options.base ? undefined : base ? compare(summary, base) : null;
-  writeStepSummary(env.GITHUB_STEP_SUMMARY, formatStepSummary({ summary, floor, ok, comparison }));
+  const against = describeBase(options['base-key'], options['pr-base']);
+  writeStepSummary(
+    env.GITHUB_STEP_SUMMARY,
+    formatStepSummary({ summary, floor, ok, comparison, against }),
+  );
   if (ok) {
     console.log(`coverage: ${pct}% lines (floor ${floor}%)`);
     return 0;

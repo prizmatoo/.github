@@ -148,9 +148,11 @@ floor.
 
 **Coverage in the job summary (BTWL-424).** The same step writes a coverage table to the run's
 job summary (the `make ci` check's summary page): line coverage of this build, of main, the
-change and the floor, then the files whose coverage moved, the largest drop first. Main builds
-keep their coverage summary in the Actions cache (`coverage-main-<directory>-<sha>`); a PR build
-restores the one of its base commit, or the newest main one, and passes it as `--base`. Nothing is
+change and the floor, then the files whose coverage moved, the largest drop first, and the files
+main does not have yet (marked `new`). Main builds keep their coverage summary in the Actions cache
+(`coverage-main-<directory>-<sha>`); a PR build restores the one of its base commit, or the newest
+main one, and passes it as `--base`. The summary names the main commit it compared with and says
+when that is not the PR's base (the change then includes what merged in between). Nothing is
 posted on the PR (no bot output on BTWL repos): open the check's details to read it. The cache
 never fails a build; without a main summary the change column stays empty. The floor is
 unchanged.

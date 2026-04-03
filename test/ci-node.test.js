@@ -72,6 +72,14 @@ describe('ci-node.yml', () => {
     assert.ok(restore >= 0 && restore < steps.indexOf(/** @type {any} */ (floor)));
   });
 
+  it("names the main build it compared with: the restored key and the PR's base", () => {
+    const floor = steps.find((s) => s.name === 'Coverage floor');
+    const restore = steps.find((s) => s.uses?.startsWith('actions/cache/restore@'));
+    assert.equal(floor?.env?.BASE_KEY, `\${{ steps.${restore?.id}.outputs.cache-matched-key }}`);
+    assert.equal(floor?.env?.PR_BASE, '${{ github.event.pull_request.base.sha }}');
+    assert.match(floor?.run ?? '', /--base-key "\$BASE_KEY" --pr-base "\$PR_BASE"/);
+  });
+
   it('uploads coverage even when make ci fails', () => {
     const upload = steps.find((s) => s.name === 'Upload coverage');
     assert.ok(upload, 'coverage upload missing');

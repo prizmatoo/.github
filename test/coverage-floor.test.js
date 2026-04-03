@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 
 import {
   compare,
+  describeBase,
   evaluate,
   formatStepSummary,
   formatTable,
@@ -240,6 +241,49 @@ describe('compare', () => {
       ],
     );
   });
+
+  it('lists files main does not have after them, lowest coverage first', () => {
+    const withNew = istanbul({
+      [`${WS}/src/orders/service.ts`]: [450, 500],
+      [`${WS}/src/orders/expiry.ts`]: [30, 60],
+      [`${WS}/src/orders/requote.ts`]: [10, 40],
+    });
+    const files = compare(
+      readSummary(JSON.stringify(withNew)),
+      readSummary(JSON.stringify(mainBuild)),
+      WS,
+    ).files;
+    assert.deepEqual(
+      files.map((f) => [f.file, f.base, f.pct, f.delta]),
+      [
+        ['src/orders/requote.ts', null, 25, null],
+        ['src/orders/expiry.ts', null, 50, null],
+      ],
+    );
+  });
+});
+
+describe('describeBase', () => {
+  const sha = '3f9c2a41d7be0e6a1c55f0d1a9b3e2c47d8a6f10';
+  const other = '9b1e04c2aa7f3d5e8c6b2f1a0d9e8c7b6a5f4e3d';
+
+  it("names the main commit when it is the PR's base", () => {
+    assert.equal(
+      describeBase(`coverage-main-.-${sha}`, sha),
+      "Compared with main at `3f9c2a4`, this PR's base.",
+    );
+  });
+
+  it("says so when the cache had only a newer main build than the PR's base", () => {
+    const text = describeBase(`coverage-main-.-${sha}`, other);
+    assert.match(text, /^Compared with main at `3f9c2a4`, the newest main build with coverage/);
+    assert.match(text, /this PR's base `9b1e04c` has none/);
+  });
+
+  it('falls back to "a main build" without a key', () => {
+    assert.equal(describeBase('', other), 'Compared with a main build.');
+    assert.equal(describeBase(undefined, undefined), 'Compared with a main build.');
+  });
 });
 
 describe('formatStepSummary', () => {
@@ -252,6 +296,19 @@ describe('formatStepSummary', () => {
     assert.match(md, /^\| lines \| 84\.09% \| 85\.45% \| -1\.36 \| 80% \|$/m);
     assert.match(md, /^\| `src\/orders\/routes\.ts` \| 80\.00% \| 76\.00% \| -4\.00 \|$/m);
     assert.match(md, /^\| `src\/orders\/quote\.ts` \| 90\.00% \| 95\.00% \| \+5\.00 \|$/m);
+  });
+
+  it('says which main build it compared with, and marks new files', () => {
+    const comparison = {
+      pct: 84.09,
+      base: 85.45,
+      delta: -1.36,
+      files: [{ file: 'src/orders/expiry.ts', pct: 50, base: null, delta: null }],
+    };
+    const against = "Compared with main at `3f9c2a4`, this PR's base.";
+    const md = formatStepSummary({ summary, floor: 80, ok: true, comparison, against });
+    assert.match(md, /^Compared with main at `3f9c2a4`, this PR's base\.$/m);
+    assert.match(md, /^\| `src\/orders\/expiry\.ts` \| – \| 50\.00% \| new \|$/m);
   });
 
   it('says so when there is no main build to compare with', () => {
@@ -282,9 +339,13 @@ describe('main, in Actions', () => {
 
   it('writes the job summary with the delta against --base', () => {
     const file = jobSummary('summary.md');
+    const sha = '3f9c2a41d7be0e6a1c55f0d1a9b3e2c47d8a6f10';
     const args = [summaryFile(prBuild), '--base', summaryFile(mainBuild)];
+    args.push('--base-key', `coverage-main-.-${sha}`, '--pr-base', sha);
     assert.equal(run(() => main(args, { GITHUB_STEP_SUMMARY: file })).code, 0);
-    assert.match(readFileSync(file, 'utf8'), /\| lines \| 84\.09% \| 85\.45% \| -1\.36 \| 80% \|/);
+    const md = readFileSync(file, 'utf8');
+    assert.match(md, /\| lines \| 84\.09% \| 85\.45% \| -1\.36 \| 80% \|/);
+    assert.match(md, /Compared with main at `3f9c2a4`, this PR's base\./);
   });
 
   it('still fails below the floor, and the summary says so', () => {

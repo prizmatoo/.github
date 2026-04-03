@@ -103,6 +103,7 @@ jobs:
       # summary in the Actions cache, a PR build restores its base's (or the newest main one).
       # Never fails the job: without it the summary has no change column.
       - name: Restore main's coverage summary
+        id: coverage-main
         if: github.event_name == 'pull_request'
         continue-on-error: true
         uses: actions/cache/restore@v4.2.3
@@ -119,7 +120,11 @@ jobs:
           SUMMARY: ${{ inputs.coverage-summary }}
           FLOOR: ${{ inputs.coverage-floor }}
           BASE: ${{ github.event_name == 'pull_request' && format('{0}/.coverage-main/summary', github.workspace) || '' }}
-        run: node "$GITHUB_WORKSPACE/.shared-ci/scripts/coverage-floor.js" "$SUMMARY" --floor "$FLOOR" --base "$BASE"
+          BASE_KEY: ${{ steps.coverage-main.outputs.cache-matched-key }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: >-
+          node "$GITHUB_WORKSPACE/.shared-ci/scripts/coverage-floor.js" "$SUMMARY" --floor "$FLOOR"
+          --base "$BASE" --base-key "$BASE_KEY" --pr-base "$PR_BASE"
 
       - name: Keep main's coverage summary
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
