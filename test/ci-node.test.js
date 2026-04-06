@@ -51,6 +51,35 @@ describe('ci-node.yml', () => {
     assert.equal(Number(cache?.env?.SEGMENT_DOWNLOAD_TIMEOUT_MINS), 2);
   });
 
+  it("restores main's coverage summary on PRs and keeps it on main builds, never failing on it", () => {
+    const restore = steps.find((s) => s.uses?.startsWith('actions/cache/restore@'));
+    const save = steps.find((s) => s.uses?.startsWith('actions/cache/save@'));
+    assert.equal(restore?.if, "github.event_name == 'pull_request'");
+    assert.match(String(restore?.with?.key), /github\.event\.pull_request\.base\.sha/);
+    assert.equal(save?.if, "github.event_name == 'push' && github.ref == 'refs/heads/main'");
+    assert.match(String(save?.with?.key), /github\.sha/);
+    assert.equal(restore?.with?.path, save?.with?.path);
+    for (const s of steps.filter((s) => /main's coverage summary/.test(s.name ?? ''))) {
+      assert.equal(s['continue-on-error'], true, s.name);
+    }
+  });
+
+  it('gives the coverage step the restored summary as --base, on PRs only', () => {
+    const floor = steps.find((s) => s.name === 'Coverage floor');
+    assert.match(floor?.run ?? '', /--base "\$BASE"/);
+    assert.match(String(floor?.env?.BASE), /github\.event_name == 'pull_request' &&/);
+    const restore = steps.findIndex((s) => s.uses?.startsWith('actions/cache/restore@'));
+    assert.ok(restore >= 0 && restore < steps.indexOf(/** @type {any} */ (floor)));
+  });
+
+  it("names the main build it compared with: the restored key and the PR's base", () => {
+    const floor = steps.find((s) => s.name === 'Coverage floor');
+    const restore = steps.find((s) => s.uses?.startsWith('actions/cache/restore@'));
+    assert.equal(floor?.env?.BASE_KEY, `\${{ steps.${restore?.id}.outputs.cache-matched-key }}`);
+    assert.equal(floor?.env?.PR_BASE, '${{ github.event.pull_request.base.sha }}');
+    assert.match(floor?.run ?? '', /--base-key "\$BASE_KEY" --pr-base "\$PR_BASE"/);
+  });
+
   it('uploads coverage even when make ci fails', () => {
     const upload = steps.find((s) => s.name === 'Upload coverage');
     assert.ok(upload, 'coverage upload missing');

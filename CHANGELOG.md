@@ -45,6 +45,9 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - Production approvals: `.approvals/prod-change.yml` (one admin, escalation after 4h) and a
   `prod-change` job in `release.yml` that asks approval-router through `route-approval.yml` and
   waits; input `production` (`false` for a library) and the service client secrets (BTWL-322).
+- Coverage in the job summary of `ci-node.yml` and `ci-python.yml`: total, change against main
+  and the files whose coverage moved; main builds keep their summary in the Actions cache for the
+  PRs based on them. `coverage-floor.js --base`. No PR comment (BTWL-424).
 
 ### Changed
 

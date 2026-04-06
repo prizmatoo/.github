@@ -99,11 +99,51 @@ jobs:
           token: ${{ secrets.shared-ci-token || github.token }}
           persist-credentials: false
 
+      # Coverage of main for the change shown in the job summary (BTWL-424): main builds keep their
+      # summary in the Actions cache, a PR build restores its base's (or the newest main one).
+      # Never fails the job: without it the summary has no change column.
+      - name: Restore main's coverage summary
+        id: coverage-main
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/cache/restore@v4.2.3
+        with:
+          path: .coverage-main
+          key: coverage-main-${{ inputs.working-directory }}-${{ github.event.pull_request.base.sha }}
+          restore-keys: |
+            coverage-main-${{ inputs.working-directory }}-
+
+      # Fails below the floor; total, change against main and the files whose coverage moved go
+      # to the job summary (no PR comment).
       - name: Coverage floor
         env:
           SUMMARY: ${{ inputs.coverage-summary }}
           FLOOR: ${{ inputs.coverage-floor }}
-        run: node "$GITHUB_WORKSPACE/.shared-ci/scripts/coverage-floor.js" "$SUMMARY" --floor "$FLOOR"
+          BASE: ${{ github.event_name == 'pull_request' && format('{0}/.coverage-main/summary', github.workspace) || '' }}
+          BASE_KEY: ${{ steps.coverage-main.outputs.cache-matched-key }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: >-
+          node "$GITHUB_WORKSPACE/.shared-ci/scripts/coverage-floor.js" "$SUMMARY" --floor "$FLOOR"
+          --base "$BASE" --base-key "$BASE_KEY" --pr-base "$PR_BASE"
+
+      - name: Keep main's coverage summary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          SUMMARY: ${{ inputs.coverage-summary }}
+        run: |
+          if [ -f "$SUMMARY" ]; then
+            mkdir -p "$GITHUB_WORKSPACE/.coverage-main"
+            cp "$SUMMARY" "$GITHUB_WORKSPACE/.coverage-main/summary"
+          fi
+
+      - name: Save main's coverage summary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        uses: actions/cache/save@v4.2.3
+        with:
+          path: .coverage-main
+          key: coverage-main-${{ inputs.working-directory }}-${{ github.sha }}
 
       - name: Upload coverage
         if: always()

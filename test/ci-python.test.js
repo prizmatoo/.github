@@ -54,6 +54,14 @@ describe('ci-python.yml', () => {
     assert.deepEqual(junit(py), junit(node));
   });
 
+  it("keeps main's coverage summary and compares with it exactly like ci-node (BTWL-424)", () => {
+    /** @param {import('./helpers.js').Workflow} wf */
+    const coverage = (wf) =>
+      allSteps(wf).filter((s) => /coverage summary$|^Coverage floor$/.test(s.name ?? ''));
+    assert.equal(coverage(py).length, 4);
+    assert.deepEqual(coverage(py), coverage(node));
+  });
+
   it('keeps the job id so the required check name is the same', () => {
     assert.deepEqual(Object.keys(py.jobs), Object.keys(node.jobs));
   });
