@@ -62,6 +62,15 @@ describe('ci-python.yml', () => {
     assert.deepEqual(coverage(py), coverage(node));
   });
 
+  it('lists quarantined tests like ci-node, from tests/quarantine.json, once Node is set up', () => {
+    /** @param {import('./helpers.js').Workflow} wf */
+    const q = (wf) => allSteps(wf).find((s) => s.name === 'Quarantined tests');
+    assert.deepEqual(q(py), q(node));
+    const at = steps.findIndex((s) => s.name === 'Quarantined tests');
+    assert.ok(at > steps.findIndex((s) => s.uses?.startsWith('actions/setup-node@')));
+    assert.equal(py.on.workflow_call.inputs['quarantine-file'].default, 'tests/quarantine.json');
+  });
+
   it('keeps the job id so the required check name is the same', () => {
     assert.deepEqual(Object.keys(py.jobs), Object.keys(node.jobs));
   });
