@@ -26,6 +26,10 @@ on:
         description: JUnit XML written by make test, relative to working-directory
         type: string
         default: reports/junit.xml
+      quarantine-file:
+        description: The repo's list of tests CI skips while their fix waits, relative to working-directory
+        type: string
+        default: test/quarantine.json
       shared-ci-ref:
         description: Ref of prizmatoo/.github whose scripts run the coverage check
         type: string
@@ -98,6 +102,15 @@ jobs:
           path: .shared-ci
           token: ${{ secrets.shared-ci-token || github.token }}
           persist-credentials: false
+
+      # The tests this repo skips in CI while their fix waits, with their Jira bugs, in the job
+      # summary (BTWL-430). Reports only; a repo without the file has nothing in quarantine.
+      - name: Quarantined tests
+        continue-on-error: true
+        env:
+          QUARANTINE: ${{ inputs.quarantine-file }}
+          JUNIT: ${{ inputs.junit-path }}
+        run: node "$GITHUB_WORKSPACE/.shared-ci/scripts/quarantine-summary.js" "$QUARANTINE" --junit "$JUNIT"
 
       # Coverage of main for the change shown in the job summary (BTWL-424): main builds keep their
       # summary in the Actions cache, a PR build restores its base's (or the newest main one).

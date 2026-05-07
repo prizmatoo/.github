@@ -117,6 +117,7 @@ jobs:
 | `coverage-summary`  | `coverage/coverage-summary.json` | summary the coverage floor reads                     |
 | `coverage-floor`    | `80`                             | minimum total line coverage, percent                 |
 | `junit-path`        | `reports/junit.xml`              | JUnit XML uploaded for the Xray import               |
+| `quarantine-file`   | `test/quarantine.json`           | tests CI skips while their fix waits (see below)     |
 
 **JUnit results.** `make test` writes `reports/junit.xml` in every repo. `ci-node.yml` uploads it
 as the artifact `junit-<repo>-<sha>` (e.g. `junit-btwl-order-service-3f9c2a4…`), which is what the
@@ -156,6 +157,32 @@ when that is not the PR's base (the change then includes what merged in between)
 posted on the PR (no bot output on BTWL repos): open the check's details to read it. The cache
 never fails a build; without a main summary the change column stays empty. The floor is
 unchanged.
+
+**Quarantined tests in the job summary (BTWL-430).** A test that fails for a reason outside the
+code under test (the real clock, a time window) can be skipped in CI while its fix waits. The repo
+lists it in `test/quarantine.json` (`tests/quarantine.json` in Python repos) with its Jira bug:
+
+```json
+{
+  "tests": [
+    {
+      "name": "quote expires at end of day",
+      "file": "test/quote/expiry.test.ts",
+      "issue": "BTWL-402",
+      "since": "2026-03-18",
+      "skipInCiBetweenUtc": ["23:00", "00:30"],
+      "why": "uses the real clock: fails when the quote and the check fall on two UTC days"
+    }
+  ]
+}
+```
+
+After `make ci`, `scripts/quarantine-summary.js` writes a "Quarantined tests" table to the job
+summary: each test with its Jira link, the days since it was quarantined, the CI window it is
+skipped in, and whether this build ran it (passed, failed) or skipped it, read from the JUnit
+report. A repo without the file shows "None". The step only reports: it never fails the build, and
+a list it cannot read becomes a warning. Skipping the test is still the repo's own test helper
+(btwl-order-service `test/support/quarantine.ts`); remove the entry in the PR that fixes the test.
 
 **Repo owner checklist** (from the pnpm vs npm spike, BTWL-38):
 

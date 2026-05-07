@@ -48,6 +48,9 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - Coverage in the job summary of `ci-node.yml` and `ci-python.yml`: total, change against main
   and the files whose coverage moved; main builds keep their summary in the Actions cache for the
   PRs based on them. `coverage-floor.js --base`. No PR comment (BTWL-424).
+- Quarantined tests in the job summary of `ci-node.yml` and `ci-python.yml`: each test in the
+  repo's `test/quarantine.json` (input `quarantine-file`) with its Jira bug, days in quarantine,
+  its CI window and whether this build ran or skipped it. Reports only (BTWL-430).
 
 ### Changed
 

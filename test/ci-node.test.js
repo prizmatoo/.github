@@ -117,6 +117,15 @@ describe('ci-node.yml', () => {
     assert.match(steps[check].run ?? '', /test -s "\$JUNIT"/);
   });
 
+  it('lists quarantined tests in the job summary from the shared scripts, never failing on it', () => {
+    const q = steps.findIndex((s) => s.name === 'Quarantined tests');
+    const shared = steps.findIndex((s) => s.with?.repository === 'prizmatoo/.github');
+    assert.ok(q > shared, 'runs after the shared scripts are checked out');
+    assert.equal(steps[q]['continue-on-error'], true);
+    assert.match(steps[q].run ?? '', /quarantine-summary\.js" "\$QUARANTINE" --junit "\$JUNIT"/);
+    assert.equal(wf.on.workflow_call.inputs['quarantine-file'].default, 'test/quarantine.json');
+  });
+
   it('does not keep the checkout credentials around', () => {
     const checkout = usesStep('actions/checkout@');
     assert.equal(checkout?.with?.['persist-credentials'], false);
