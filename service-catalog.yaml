@@ -1,7 +1,7 @@
-# Service catalog v1: one entry per repository in the prizmatoo org.
+# Service catalog v2: one entry per repository in the prizmatoo org.
 #
-# The machine-readable answer to "what is this repo and who owns it". The ENG page
-# "Service catalog" is the prose version; when they disagree, fix both.
+# The machine-readable answer to "what is this repo, who owns it and who depends on it". The ENG
+# page "Service catalog v2" is the prose version; when they disagree, fix both.
 #
 #   owner_team      squad that owns the repo
 #   primary         GitHub login of the Jira component lead (tags and releases)
@@ -9,7 +9,14 @@
 #   jira_component  Jira component in project BTWL
 #   confluence_*    where the repo is described
 #   paths           globs, relative to the repo root, of the files that belong to the component
-version: 1
+#   produces        what the repo offers: api, event, file, library or workflow, by name
+#   consumes        what it uses, by the name another entry produces it under; kind external for a
+#                   system outside the org
+#
+# Names are unique across the catalog: an API or a library is named after its repo or package, an
+# event after its topic (<entity>.<event>.v<major>, ADR-005 in btwl-order-service), a file or a
+# workflow after what its readers call it. A consumed event names the consumer group.
+version: 2
 
 repos:
   - name: .github
@@ -23,6 +30,16 @@ repos:
     language: YAML (GitHub Actions), JavaScript
     paths:
       [.github/**, .approvals/**, scripts/**, test/**, service-catalog.yaml, CODEOWNERS.template]
+    produces:
+      - { kind: workflow, name: ci-node.yml }
+      - { kind: workflow, name: ci-python.yml }
+      - { kind: workflow, name: pr-check.yml }
+      - { kind: workflow, name: gitleaks.yml }
+      - { kind: workflow, name: release.yml }
+      - { kind: workflow, name: xray-import.yml }
+    consumes:
+      - { kind: workflow, name: route-approval.yml } # release.yml asks for prod-change
+      - { kind: external, name: Xray }
 
   - name: btwl-auth-gateway
     description: JWT issuance, JWKS, roles and token introspection
@@ -34,6 +51,10 @@ repos:
     confluence_page: Service catalog
     language: TypeScript (Express, Jest)
     paths: [src/**, test/**, openapi.yaml, .env.example]
+    produces:
+      - { kind: api, name: btwl-auth-gateway, spec: openapi.yaml }
+    consumes:
+      - { kind: external, name: btwl-erp } # users and role assignments
 
   - name: btwl-pricing-lib
     description: '@btwl/pricing: money, zones, rate cards, DIM weight and rounding'
@@ -45,6 +66,10 @@ repos:
     confluence_page: Service catalog
     language: TypeScript library (Vitest)
     paths: [src/**, test/**, docs/adr/**]
+    produces:
+      - { kind: library, name: '@btwl/pricing' } # tarball on the GitHub release, vendored by consumers
+    consumes:
+      - { kind: external, name: Ravenpost } # weekly rate-card refresh
 
   - name: btwl-order-service
     description: Customer orders, order lines and quotes via @btwl/pricing
@@ -56,6 +81,22 @@ repos:
     confluence_page: Service catalog
     language: TypeScript (Fastify, Vitest)
     paths: [src/**, test/**, openapi.yaml, docs/adr/**]
+    produces:
+      - { kind: api, name: btwl-order-service, spec: openapi.yaml }
+      - kind: event
+        name: order.confirmed.v1
+        event: OrderConfirmed
+        version: 1
+        contract: contracts/events/OrderConfirmed.v1.schema.json
+      - kind: event
+        name: order.shipped.v1
+        event: OrderShipped
+        version: 1
+        contract: contracts/events/OrderShipped.v1.schema.json
+    consumes:
+      - { kind: library, name: '@btwl/pricing' }
+      - { kind: api, name: btwl-inventory-service } # reserve on confirm, commit on ship, release on cancel
+      - { kind: api, name: btwl-auth-gateway }
 
   - name: btwl-procurement-api
     description: Purchase requisitions, approval threshold and the Ledgerline export
@@ -67,6 +108,14 @@ repos:
     confluence_page: Service catalog
     language: TypeScript (Fastify, Vitest)
     paths: [src/**, test/**, openapi.yaml, docs/adr/**]
+    produces:
+      - { kind: api, name: btwl-procurement-api, spec: openapi.yaml }
+      - { kind: file, name: po-export, to: [Ledgerline] } # nightly CSV, POs sent the previous business day
+    consumes:
+      - { kind: api, name: btwl-auth-gateway }
+      - { kind: api, name: btwl-approval-router } # procurement-t3, delegations
+      - { kind: external, name: Ledgerline } # FX rates file, cost centres
+      - { kind: external, name: SealVault }
 
   - name: btwl-inventory-service
     description: 'IMS: warehouses, SKUs, stock levels and reservations (reserve, commit, release)'
@@ -78,6 +127,11 @@ repos:
     confluence_page: Service catalog
     language: Python 3.12 (FastAPI, pytest)
     paths: [src/**, tests/**, openapi.yaml, docs/runbooks/**]
+    produces:
+      - { kind: api, name: btwl-inventory-service, spec: openapi.yaml }
+    consumes:
+      - { kind: event, name: order.shipped.v1, group: btwl-inventory-service, since: 2.0.0 }
+      - { kind: api, name: btwl-auth-gateway }
 
   - name: btwl-billing-service
     description: Invoices from shipped orders, TollGate tax, credit memos, nightly Ledgerline invoice export and reconciliation
@@ -89,6 +143,16 @@ repos:
     confluence_page: Service catalog
     language: TypeScript (Fastify, Vitest)
     paths: [src/**, test/**, openapi.yaml, contracts/vendored/**, db/**]
+    produces:
+      - { kind: api, name: btwl-billing-service, spec: openapi.yaml }
+      - { kind: file, name: finance-export, to: [Ledgerline] } # nightly invoice file, Finance's import
+    consumes:
+      - { kind: event, name: order.shipped.v1, group: btwl-billing-service }
+      - { kind: library, name: '@btwl/pricing' }
+      - { kind: api, name: btwl-auth-gateway }
+      - { kind: api, name: btwl-approval-router } # credit-memo
+      - { kind: external, name: TollGate }
+      - { kind: external, name: Hearth }
 
   - name: btwl-approval-router
     description: Approval routing from YAML workflow files - approvers from auth-gateway roles, notifiers, escalation timers, delegation, audit log and callbacks
@@ -107,6 +171,12 @@ repos:
       - db/migrations/**
       - examples/**
       - .github/workflows/route-approval.yml
+    produces:
+      - { kind: api, name: btwl-approval-router, spec: openapi.yaml }
+      - { kind: workflow, name: route-approval.yml }
+    consumes:
+      - { kind: api, name: btwl-auth-gateway } # role members
+      - { kind: external, name: Hearth }
 
   - name: btwl-console
     description: 'Internal web console: requisitions, approvals inbox, order search and detail; one module per squad'
@@ -118,3 +188,10 @@ repos:
     confluence_page: Service catalog
     language: TypeScript (React, Vite, Fastify session server, Vitest, Playwright)
     paths: [src/**, server/**, test/**, e2e/**, specs/**, api-versions.json]
+    produces: []
+    consumes:
+      - { kind: api, name: btwl-auth-gateway } # sign-in and refresh through the session server
+      - { kind: api, name: btwl-procurement-api }
+      - { kind: api, name: btwl-order-service }
+      - { kind: api, name: btwl-inventory-service }
+      - { kind: api, name: btwl-billing-service }
