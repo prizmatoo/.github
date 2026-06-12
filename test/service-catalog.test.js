@@ -181,7 +181,7 @@ describe('service-catalog.yaml', () => {
       const events = order?.produces
         .filter((i) => i.kind === 'event')
         .map((i) => `${i.event} v${i.version}`);
-      assert.deepEqual(events, ['OrderConfirmed v1', 'OrderShipped v1']);
+      assert.deepEqual(events, ['OrderConfirmed v1', 'OrderShipped v1', 'OrderShipped v2']);
     });
   });
 

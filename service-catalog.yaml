@@ -93,6 +93,13 @@ repos:
         event: OrderShipped
         version: 1
         contract: contracts/events/OrderShipped.v1.schema.json
+      - kind: event
+        name: order.shipped.v2
+        event: OrderShipped
+        version: 2
+        contract: contracts/events/OrderShipped.v2.schema.json
+        flag: orders.events.v2 # off by default; v1 is still published for every shipment
+        since: 1.5.0
     consumes:
       - { kind: library, name: '@btwl/pricing' }
       - { kind: api, name: btwl-inventory-service } # reserve on confirm, commit on ship, release on cancel
