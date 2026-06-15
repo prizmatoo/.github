@@ -56,10 +56,11 @@ squad's line, add finer rules below it.
 
 ## Service catalog
 
-`service-catalog.yaml` has one entry per repository in the org: what it is, the owning squad,
-primary (Jira component lead) and backup (reviewer) as GitHub logins, the Jira component, the
-Confluence page that describes it, the language and the path globs that belong to the component.
-The ENG page "Service catalog" is the prose version of the same list.
+`service-catalog.yaml` (version 2) has one entry per repository in the org: what it is, the owning
+squad, primary (Jira component lead) and backup (reviewer) as GitHub logins, the Jira component,
+the Confluence page that describes it, the language, the path globs that belong to the component,
+and what it produces and consumes. The ENG page "Service catalog v2" is the prose version of the
+same list.
 
 ```yaml
 - name: btwl-order-service
@@ -72,11 +73,45 @@ The ENG page "Service catalog" is the prose version of the same list.
   confluence_page: Service catalog
   language: TypeScript (Fastify, Vitest)
   paths: [src/**, test/**, openapi.yaml, docs/adr/**]
+  produces:
+    - { kind: api, name: btwl-order-service, spec: openapi.yaml }
+    - kind: event
+      name: order.shipped.v1
+      event: OrderShipped
+      version: 1
+      contract: contracts/events/OrderShipped.v1.schema.json
+  consumes:
+    - { kind: library, name: '@btwl/pricing' }
+    - { kind: api, name: btwl-inventory-service }
 ```
 
+**produces and consumes.** Each item has a `kind` (`api`, `event`, `file`, `library`, `workflow`)
+and a `name` that is unique in the catalog: an API is named after its repo, a library after its
+package, an event after its topic (`<entity>.<event>.v<major>`, ADR-005 in btwl-order-service)
+with `event`, `version` and the `contract` file in the producing repo, a file or a workflow after
+what its readers call it (`finance-export`, `route-approval.yml`). An event behind a feature flag
+names it (`flag`). A repo consumes by that same name; a consumed event names the consumer group
+(`group`), and `since` says from which version of the consumer. Systems outside the org
+(Ledgerline, TollGate, Hearth, ...) are consumed as `kind: external`.
+
 `make test` validates it: required fields, known squads, owners are org members and not the same
-person twice, components are `btwl-<repo>` (`btwl-shared-ci` for this repo), and this repo's
-`CODEOWNERS` matches its own entry. A new repo gets its entry in the PR that creates it.
+person twice, components are `btwl-<repo>` (`btwl-shared-ci` for this repo), this repo's
+`CODEOWNERS` matches its own entry, every consumed item is produced by another entry, and every
+event consumer names its group. A new repo gets its entry in the PR that creates it; a new
+consumer adds its `consumes` line in the PR that starts consuming.
+
+**Blast radius.** Before changing a contract, ask the catalog who is downstream:
+
+```bash
+make setup
+node scripts/blast-radius.js OrderShipped          # every major of the event
+node scripts/blast-radius.js order.shipped.v1      # one topic, API, file or library by name
+node scripts/blast-radius.js @btwl/pricing --json
+```
+
+It lists the consumers of each topic with their squad, lead, backup and consumer group, then what
+those consumers produce in turn, and ends with the repos and the teams to involve. It runs here
+only (it reads the YAML with this repo's dependencies); nothing in the workflows calls it.
 
 ## Workflows
 
