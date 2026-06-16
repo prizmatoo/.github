@@ -92,7 +92,11 @@ with `event`, `version` and the `contract` file in the producing repo, a file or
 what its readers call it (`finance-export`, `route-approval.yml`). An event behind a feature flag
 names it (`flag`). A repo consumes by that same name; a consumed event names the consumer group
 (`group`), and `since` says from which version of the consumer. Systems outside the org
-(Ledgerline, TollGate, Hearth, ...) are consumed as `kind: external`.
+(Ledgerline, TollGate, Hearth, ...) are consumed as `kind: external`; a file read outside the org
+names its readers (`to`). A produced item that passes on data from something its repo consumes
+says so with `from`: billing's `finance-export` is built `from: [order.shipped.v1]` (one row per
+shipped order, keyed by `order_id`). Billing's own API is not: billing absorbs an event change in
+its consumer and its API stays as it was.
 
 `make test` validates it: required fields, known squads, owners are org members and not the same
 person twice, components are `btwl-<repo>` (`btwl-shared-ci` for this repo), this repo's
@@ -109,9 +113,26 @@ node scripts/blast-radius.js order.shipped.v1      # one topic, API, file or lib
 node scripts/blast-radius.js @btwl/pricing --json
 ```
 
-It lists the consumers of each topic with their squad, lead, backup and consumer group, then what
-those consumers produce in turn, and ends with the repos and the teams to involve. It runs here
-only (it reads the YAML with this repo's dependencies); nothing in the workflows calls it.
+It lists the consumers of each topic with their squad, lead, backup and consumer group, says "no
+consumers yet" for a topic nobody reads, follows a consumer further only through what it produces
+`from` the item, and ends with the repos, items, teams and outside systems to involve:
+
+```text
+OrderShipped, produced by btwl-order-service:
+  order.shipped.v1
+    btwl-billing-service (Order-to-Cash; krunal-prizmato, backup venkat-prizmato), consumer group btwl-billing-service
+      passes it on in finance-export (file), read by Ledgerline
+    btwl-inventory-service (Warehouse Systems; sathwik-prizmato, backup aaquib-prizmato), consumer group btwl-inventory-service, since 2.0.0
+  order.shipped.v2 (behind orders.events.v2, from 1.5.0)
+    no consumers yet
+
+Blast radius: btwl-billing-service, btwl-inventory-service, finance-export
+Teams to involve: Order-to-Cash, Warehouse Systems
+Outside the org: Ledgerline
+```
+
+It runs here only (it reads the YAML with this repo's dependencies); nothing in the workflows calls
+it.
 
 ## Workflows
 

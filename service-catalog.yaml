@@ -12,6 +12,8 @@
 #   produces        what the repo offers: api, event, file, library or workflow, by name
 #   consumes        what it uses, by the name another entry produces it under; kind external for a
 #                   system outside the org
+#   from            on a produced item: the consumed items whose data it passes on (a file built
+#                   from an event's fields). scripts/blast-radius.js follows a change only this way.
 #
 # Names are unique across the catalog: an API or a library is named after its repo or package, an
 # event after its topic (<entity>.<event>.v<major>, ADR-005 in btwl-order-service), a file or a
@@ -152,7 +154,9 @@ repos:
     paths: [src/**, test/**, openapi.yaml, contracts/vendored/**, db/**]
     produces:
       - { kind: api, name: btwl-billing-service, spec: openapi.yaml }
-      - { kind: file, name: finance-export, to: [Ledgerline] } # nightly invoice file, Finance's import
+      # The nightly invoice file Finance imports into Ledgerline: one row per invoice, keyed by the
+      # shipped order (order_id), so a change to the shipment event can reach Finance through it.
+      - { kind: file, name: finance-export, to: [Ledgerline], from: [order.shipped.v1] }
     consumes:
       - { kind: event, name: order.shipped.v1, group: btwl-billing-service }
       - { kind: library, name: '@btwl/pricing' }

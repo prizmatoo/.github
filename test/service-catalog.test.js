@@ -14,7 +14,7 @@ import { ROOT } from './helpers.js';
  *   jira_component: string, confluence_space: string, confluence_page: string, language: string,
  *   paths: string[], produces: Item[], consumes: Item[] }} Entry
  * @typedef {{ kind: string, name: string, event?: string, version?: number, contract?: string,
- *   group?: string, to?: string[], spec?: string, flag?: string, since?: string }} Item
+ *   group?: string, to?: string[], from?: string[], spec?: string, flag?: string, since?: string }} Item
  */
 
 const catalog = /** @type {{ version: number, repos: Entry[] }} */ (
@@ -172,6 +172,19 @@ describe('service-catalog.yaml', () => {
             'string',
             `${r.name} consumes ${item.name} without a group`,
           );
+        }
+      }
+    });
+
+    it('builds a produced item only from what the same repo consumes', () => {
+      for (const r of catalog.repos) {
+        for (const item of r.produces.filter((i) => i.from)) {
+          for (const source of item.from ?? []) {
+            assert.ok(
+              r.consumes.some((c) => c.name === source),
+              `${r.name} ${item.name} is from ${source}, which ${r.name} does not consume`,
+            );
+          }
         }
       }
     });
