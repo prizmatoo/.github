@@ -140,9 +140,9 @@ describe('scripts/', () => {
   const files = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) =>
     f.endsWith('.js'),
   );
-  // Tools for this repo's own catalog: run here after `make setup`, never from a caller's
-  // workflow, so they may use this repo's dependencies (yaml).
-  const LOCAL_ONLY = ['blast-radius.js'];
+  // Tools for this repo's own catalog: run here after `make setup` (catalog-check.js by make ci),
+  // never from a caller's workflow, so they may use this repo's dependencies (yaml, ajv).
+  const LOCAL_ONLY = ['blast-radius.js', 'catalog-check.js'];
 
   it('no workflow runs a local-only script', () => {
     for (const { file, wf } of loadWorkflows()) {
@@ -158,7 +158,9 @@ describe('scripts/', () => {
     const text = readFileSync(join(dir, file), 'utf8');
 
     it(`${file} imports only node: builtins and local files (callers run it without an install)`, () => {
-      const allowed = LOCAL_ONLY.includes(file) ? /^(node:|\.\.?\/|yaml$)/ : /^(node:|\.\.?\/)/;
+      const allowed = LOCAL_ONLY.includes(file)
+        ? /^(node:|\.\.?\/|yaml$|ajv\/dist\/2020\.js$)/
+        : /^(node:|\.\.?\/)/;
       for (const [, spec] of text.matchAll(/ from '([^']+)';$/gm)) {
         assert.match(spec, allowed, spec);
       }

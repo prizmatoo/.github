@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/prizmatoo/.github/service-catalog.schema.json",
+  "title": "service-catalog.yaml",
+  "description": "One entry per repository in the prizmatoo org (BTWL-497). Checked by scripts/catalog-check.js in make ci.",
+  "type": "object",
+  "required": ["version", "repos"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 2 },
+    "repos": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/repo" }
+    }
+  },
+  "$defs": {
+    "text": { "type": "string", "pattern": "\\S" },
+    "login": { "type": "string", "pattern": "^[A-Za-z0-9-]+-prizmato$" },
+    "repo": {
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "owner_team",
+        "primary",
+        "backup",
+        "jira_component",
+        "confluence_space",
+        "confluence_page",
+        "language",
+        "paths",
+        "produces",
+        "consumes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^(\\.github|btwl-[a-z0-9-]+)$" },
+        "description": { "$ref": "#/$defs/text" },
+        "owner_team": {
+          "enum": [
+            "Platform",
+            "Order-to-Cash",
+            "Procurement & Spend",
+            "Warehouse Systems",
+            "Quality",
+            "Application Support"
+          ]
+        },
+        "primary": { "$ref": "#/$defs/login" },
+        "backup": { "$ref": "#/$defs/login" },
+        "jira_component": { "type": "string", "pattern": "^btwl-[a-z0-9-]+$" },
+        "confluence_space": { "const": "BTWL" },
+        "confluence_page": { "$ref": "#/$defs/text" },
+        "language": { "$ref": "#/$defs/text" },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[^/.]|^\\.[^/]" }
+        },
+        "produces": { "type": "array", "items": { "$ref": "#/$defs/produced" } },
+        "consumes": { "type": "array", "items": { "$ref": "#/$defs/consumed" } }
+      }
+    },
+    "kind": { "enum": ["api", "event", "file", "library", "workflow", "external"] },
+    "produced": {
+      "type": "object",
+      "required": ["kind", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["api", "event", "file", "library", "workflow"] },
+        "name": { "$ref": "#/$defs/text" },
+        "spec": { "type": "string" },
+        "event": { "type": "string", "pattern": "^[A-Z][A-Za-z]+$" },
+        "version": { "type": "integer", "minimum": 1 },
+        "contract": {
+          "type": "string",
+          "pattern": "^contracts/events/[A-Za-z]+\\.v[0-9]+\\.schema\\.json$"
+        },
+        "flag": { "type": "string" },
+        "since": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "to": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" } },
+        "from": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" } }
+      },
+      "if": { "properties": { "kind": { "const": "event" } } },
+      "then": {
+        "required": ["event", "version", "contract"],
+        "properties": { "name": { "type": "string", "pattern": "^[a-z]+\\.[a-z]+\\.v[0-9]+$" } }
+      }
+    },
+    "consumed": {
+      "type": "object",
+      "required": ["kind", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "$ref": "#/$defs/kind" },
+        "name": { "$ref": "#/$defs/text" },
+        "group": { "type": "string", "pattern": "^btwl-[a-z0-9-]+$" },
+        "since": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" }
+      },
+      "if": { "properties": { "kind": { "const": "event" } } },
+      "then": { "required": ["group"] }
+    }
+  }
+}
