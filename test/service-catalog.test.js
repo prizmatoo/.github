@@ -12,7 +12,9 @@ import { ROOT } from './helpers.js';
 /**
  * @typedef {{ name: string, description: string, owner_team: string, primary: string, backup: string,
  *   jira_component: string, confluence_space: string, confluence_page: string, language: string,
- *   paths: string[] }} Entry
+ *   paths: string[], produces: Item[], consumes: Item[] }} Entry
+ * @typedef {{ kind: string, name: string, event?: string, version?: number, contract?: string,
+ *   group?: string, to?: string[], from?: string[], spec?: string, flag?: string, since?: string }} Item
  */
 
 const catalog = /** @type {{ version: number, repos: Entry[] }} */ (
@@ -54,8 +56,8 @@ const MEMBERS = [
 ];
 
 describe('service-catalog.yaml', () => {
-  it('is version 1 with a list of repos', () => {
-    assert.equal(catalog.version, 1);
+  it('is version 2 with a list of repos', () => {
+    assert.equal(catalog.version, 2);
     assert.ok(Array.isArray(catalog.repos) && catalog.repos.length > 0);
   });
 
@@ -116,6 +118,85 @@ describe('service-catalog.yaml', () => {
       });
     });
   }
+
+  describe('produces and consumes (v2)', () => {
+    const KINDS = ['api', 'event', 'file', 'library', 'workflow', 'external'];
+    const produced = catalog.repos.flatMap((r) =>
+      (r.produces ?? []).map((item) => ({ repo: r.name, item })),
+    );
+
+    it('every entry lists what it produces and consumes, each item with a known kind and a name', () => {
+      for (const r of catalog.repos) {
+        assert.ok(Array.isArray(r.produces), `${r.name}: produces missing`);
+        assert.ok(Array.isArray(r.consumes), `${r.name}: consumes missing`);
+        for (const item of [...r.produces, ...r.consumes]) {
+          assert.ok(KINDS.includes(item.kind), `${r.name}: kind ${item.kind}`);
+          assert.equal(typeof item.name, 'string', `${r.name}: item without a name`);
+        }
+        assert.ok(!r.produces.some((i) => i.kind === 'external'), `${r.name} produces an external`);
+      }
+    });
+
+    it('names each produced item once in the whole catalog', () => {
+      const names = produced.map((p) => p.item.name);
+      assert.deepEqual(names, [...new Set(names)]);
+    });
+
+    it('consumes only what another entry produces, or an external system', () => {
+      const byName = new Map(produced.map((p) => [p.item.name, p]));
+      for (const r of catalog.repos) {
+        for (const item of r.consumes.filter((i) => i.kind !== 'external')) {
+          const p = byName.get(item.name);
+          assert.ok(p, `${r.name} consumes ${item.name}, which no entry produces`);
+          assert.equal(p.item.kind, item.kind, `${r.name} consumes ${item.name} as ${item.kind}`);
+          assert.notEqual(p.repo, r.name, `${r.name} consumes its own ${item.name}`);
+        }
+      }
+    });
+
+    it('names the topic of an event after its event and major, with its contract file (ADR-005)', () => {
+      for (const { repo, item } of produced.filter((p) => p.item.kind === 'event')) {
+        const entity = String(item.event)
+          .replace(/^Order/, '')
+          .toLowerCase();
+        assert.equal(item.name, `order.${entity}.v${item.version}`, `${repo} ${item.name}`);
+        assert.equal(item.contract, `contracts/events/${item.event}.v${item.version}.schema.json`);
+      }
+    });
+
+    it('gives every consumer of an event its consumer group', () => {
+      for (const r of catalog.repos) {
+        for (const item of r.consumes.filter((i) => i.kind === 'event')) {
+          assert.equal(
+            typeof item.group,
+            'string',
+            `${r.name} consumes ${item.name} without a group`,
+          );
+        }
+      }
+    });
+
+    it('builds a produced item only from what the same repo consumes', () => {
+      for (const r of catalog.repos) {
+        for (const item of r.produces.filter((i) => i.from)) {
+          for (const source of item.from ?? []) {
+            assert.ok(
+              r.consumes.some((c) => c.name === source),
+              `${r.name} ${item.name} is from ${source}, which ${r.name} does not consume`,
+            );
+          }
+        }
+      }
+    });
+
+    it('lists the events of btwl-order-service', () => {
+      const order = catalog.repos.find((r) => r.name === 'btwl-order-service');
+      const events = order?.produces
+        .filter((i) => i.kind === 'event')
+        .map((i) => `${i.event} v${i.version}`);
+      assert.deepEqual(events, ['OrderConfirmed v1', 'OrderShipped v1', 'OrderShipped v2']);
+    });
+  });
 
   it("agrees with this repo's CODEOWNERS", () => {
     const self = catalog.repos.find((r) => r.name === '.github');

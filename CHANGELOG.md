@@ -51,6 +51,8 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - Quarantined tests in the job summary of `ci-node.yml` and `ci-python.yml`: each test in the
   repo's `test/quarantine.json` (input `quarantine-file`) with its Jira bug, days in quarantine,
   its CI window and whether this build ran or skipped it. Reports only (BTWL-430).
+- `scripts/blast-radius.js`: the consumers of an event, API, file or library from the catalog,
+  their consumer groups and the teams to involve; runs in this repo only (BTWL-495).
 
 ### Changed
 
@@ -70,6 +72,9 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - `.gitleaks.toml`: each lockfile allowlist entry anchored to its one file, with a comment
   (BTWL-398).
 - March bumps: @types/node 22.19.15; prettier, yaml and typescript have nothing newer (BTWL-399).
+- `service-catalog.yaml` version 2: `produces` and `consumes` per repo (APIs, events by topic with
+  their contract, files, libraries, workflows; outside systems as `external`), consumer groups on
+  consumed events (BTWL-495).
 
 ### Fixed
 
