@@ -1,6 +1,6 @@
 # Gate targets, same names as every BTWL repo (Engineering standards v1).
 # This repo is plain JavaScript (ESM) and YAML: nothing is bundled, the workflows run the scripts from source.
-.PHONY: setup lint typecheck test build ci
+.PHONY: setup lint typecheck test catalog build ci
 
 setup:
 	pnpm install --frozen-lockfile
@@ -23,9 +23,13 @@ test:
 	  'test/*.test.js'
 	node scripts/coverage-floor.js coverage/lcov.info --floor 80
 
+# service-catalog.yaml against its JSON Schema (BTWL-497); errors name the repo and the line.
+catalog:
+	node scripts/catalog-check.js
+
 build:
 	@echo "build: nothing to build, workflows and scripts run from source"
 
 ci:
 	@test -d node_modules || pnpm install --frozen-lockfile
-	$(MAKE) lint typecheck test build
+	$(MAKE) lint typecheck test catalog build

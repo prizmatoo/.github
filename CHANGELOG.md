@@ -53,6 +53,9 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
   its CI window and whether this build ran or skipped it. Reports only (BTWL-430).
 - `scripts/blast-radius.js`: the consumers of an event, API, file or library from the catalog,
   their consumer groups and the teams to involve; runs in this repo only (BTWL-495).
+- `service-catalog.schema.json` and `make catalog` (`scripts/catalog-check.js`, ajv 8.20.0 as a
+  dev dependency), run by `make ci`: a catalog problem fails CI with an annotation on its line
+  that names the repo (BTWL-497).
 
 ### Changed
 
