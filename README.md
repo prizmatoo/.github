@@ -23,6 +23,7 @@ make ci         # lint, typecheck, test, build
 | `make lint`      | `prettier --check` on YAML, Markdown and JS                   |
 | `make typecheck` | `tsc --noEmit` with `checkJs` over `scripts/` and `test/`     |
 | `make test`      | `node --test`; JUnit XML to `reports/junit.xml`               |
+| `make catalog`   | `service-catalog.yaml` against `service-catalog.schema.json`  |
 | `make build`     | nothing to build: the workflows run the scripts from source   |
 | `make ci`        | installs if `node_modules/` is missing, then all of the above |
 
@@ -98,11 +99,23 @@ says so with `from`: billing's `finance-export` is built `from: [order.shipped.v
 shipped order, keyed by `order_id`). Billing's own API is not: billing absorbs an event change in
 its consumer and its API stays as it was.
 
-`make test` validates it: required fields, known squads, owners are org members and not the same
-person twice, components are `btwl-<repo>` (`btwl-shared-ci` for this repo), this repo's
-`CODEOWNERS` matches its own entry, every consumed item is produced by another entry, and every
-event consumer names its group. A new repo gets its entry in the PR that creates it; a new
-consumer adds its `consumes` line in the PR that starts consuming.
+Two checks run in `make ci`, so `ci.yml` runs them on every PR here. `make catalog`
+(`scripts/catalog-check.js`) checks the file against `service-catalog.schema.json` (JSON Schema
+2020-12): required fields, known squads, GitHub logins, `btwl-*` components, the shape of every
+produced and consumed item (a produced event needs its contract, a consumed one its group), no
+unknown fields. Each problem is an error annotation on the catalog line it is about and starts
+with the repo's name:
+
+```text
+::error file=service-catalog.yaml,line=145,title=catalog::btwl-billing-service: missing owner_team
+```
+
+`make test` checks what a schema cannot: owners are org members and not the same person twice,
+components are `btwl-<repo>` (`btwl-shared-ci` for this repo), this repo's `CODEOWNERS` matches its
+own entry, every repo of the org has an entry, every consumed item is produced by another entry,
+and `from` names something the repo consumes. A new repo gets its entry in the PR that creates it;
+a new consumer adds its `consumes` line in the PR that starts consuming. A new field goes into the
+schema in the same PR.
 
 **Blast radius.** Before changing a contract, ask the catalog who is downstream:
 
