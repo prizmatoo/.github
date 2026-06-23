@@ -78,6 +78,9 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - `service-catalog.yaml` version 2: `produces` and `consumes` per repo (APIs, events by topic with
   their contract, files, libraries, workflows; outside systems as `external`), consumer groups on
   consumed events (BTWL-495).
+- June bumps: Node 22.23.0 (the 17 June security release) in `.nvmrc` and wherever a workflow
+  sets `node-version` itself; prettier 3.8.4 (no formatting changes here), yaml 2.9.0,
+  @types/node 22.20.0. TypeScript 6 waits (BTWL-514).
 
 ### Fixed
 
