@@ -36,6 +36,30 @@ file (it is in `.prettierignore`); the checks below read its checkboxes and the 
 (ownership matrix in the ENG handbook). Copy it to `CODEOWNERS` in the repo root, keep your
 squad's line, add finer rules below it.
 
+## Service catalog
+
+`service-catalog.yaml` has one entry per repository in the org: what it is, the owning squad,
+primary (Jira component lead) and backup (reviewer) as GitHub logins, the Jira component, the
+Confluence page that describes it, the language and the path globs that belong to the component.
+The ENG page "Service catalog" is the prose version of the same list.
+
+```yaml
+- name: btwl-order-service
+  description: Customer orders, order lines and quotes via @btwl/pricing
+  owner_team: Order-to-Cash
+  primary: venkat-prizmato
+  backup: krunal-prizmato
+  jira_component: btwl-order-service
+  confluence_space: BTWL
+  confluence_page: Service catalog
+  language: TypeScript (Fastify, Vitest)
+  paths: [src/**, test/**, openapi.yaml, docs/adr/**]
+```
+
+`make test` validates it: required fields, known squads, owners are org members and not the same
+person twice, components are `btwl-<repo>` (`btwl-shared-ci` for this repo), and this repo's
+`CODEOWNERS` matches its own entry. A new repo gets its entry in the PR that creates it.
+
 ## Workflows
 
 All workflows here are reusable (`on: workflow_call`). Repos call them with `@main`; there is
