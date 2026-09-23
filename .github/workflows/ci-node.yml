@@ -56,6 +56,19 @@ jobs:
         with:
           node-version-file: ${{ inputs.working-directory }}/.nvmrc
 
+      # pnpm store cache (BTWL-38: warm installs 21s instead of 94s cold).
+      - name: Locate pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4.2.1
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
       - name: make setup
         run: make setup
 
