@@ -22,6 +22,10 @@ on:
         description: Minimum total line coverage in percent; 0 turns the check off
         type: number
         default: 80
+      junit-path:
+        description: JUnit XML written by make test, relative to working-directory
+        type: string
+        default: reports/junit.xml
       shared-ci-ref:
         description: Ref of prizmatoo/.github whose scripts run the coverage check
         type: string
@@ -62,6 +66,12 @@ jobs:
       - name: make ci
         run: make ci
 
+      # A green make ci without a JUnit report means make test stopped writing it.
+      - name: Check the JUnit report exists
+        env:
+          JUNIT: ${{ inputs.junit-path }}
+        run: test -s "$JUNIT" || { echo "::error title=junit::make test did not write $JUNIT"; exit 1; }
+
       # The floor check is the same Node script ci-node runs.
       - name: Check out shared CI scripts
         uses: actions/checkout@v4.2.2
@@ -90,3 +100,14 @@ jobs:
           path: ${{ inputs.working-directory }}/${{ inputs.coverage-path }}
           if-no-files-found: warn
           retention-days: 14
+
+      # Test results for the Xray import (BTWL-138): one artifact per repo and commit.
+      # Also on failure: failing runs are the ones QA needs to see in Xray.
+      - name: Upload JUnit results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: junit-${{ github.event.repository.name }}-${{ github.sha }}
+          path: ${{ inputs.working-directory }}/${{ inputs.junit-path }}
+          if-no-files-found: warn
+          retention-days: 30
