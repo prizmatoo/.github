@@ -12,12 +12,16 @@ lint:
 typecheck:
 	pnpm exec tsc --noEmit -p tsconfig.json
 
+# Coverage of scripts/ via node's built-in coverage (lcov), held to the same 80% floor as the
+# other repos, by the same script ci-node runs.
 test:
-	@mkdir -p reports
-	node --test \
+	@mkdir -p reports coverage
+	node --test --experimental-test-coverage --test-coverage-exclude='test/**' \
 	  --test-reporter=spec --test-reporter-destination=stdout \
 	  --test-reporter=junit --test-reporter-destination=reports/junit.xml \
+	  --test-reporter=lcov --test-reporter-destination=coverage/lcov.info \
 	  'test/*.test.js'
+	node scripts/coverage-floor.js coverage/lcov.info --floor 80
 
 build:
 	@echo "build: nothing to build, workflows and scripts run from source"
