@@ -1,0 +1,22 @@
+# CODEOWNERS template for BTWL repos. Copy it to CODEOWNERS at the repo root.
+#
+# First owner = component lead, second owner = component backup (ownership matrix in the ENG
+# handbook). Keep the default line for your squad and delete the others. Use GitHub logins,
+# not emails. The last matching pattern wins, so finer rules go below the default.
+
+# --- Default owner per squad -------------------------------------------------------------
+# Platform
+*                       @cei-prizmato @aaquib-prizmato
+# Order-to-Cash
+# *                     @venkat-prizmato @krunal-prizmato
+# Procurement & Spend
+# *                     @shubham-prizmato @aaquib-prizmato
+# Warehouse Systems
+# *                     @sathwik-prizmato @aaquib-prizmato
+
+# --- Finer rules (examples, keep what applies) --------------------------------------------
+# Event and API contracts need the architect's review.
+# /contracts/           @aaquib-prizmato
+# /openapi.yaml         @aaquib-prizmato
+# CI wiring stays with Platform.
+# /.github/workflows/   @cei-prizmato
