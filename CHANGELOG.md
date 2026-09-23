@@ -11,3 +11,5 @@ Callers use `@main`, so there are no release tags yet; everything lands under Un
 - Repo scaffold: Makefile gate targets, prettier, `tsc` over the scripts, `node:test` with JUnit output.
 - Org pull request template and `CODEOWNERS.template` with a default owner per squad (BTWL-42).
 - Reusable `pr-check.yml`: branch, title and Jira link must carry the same `BTWL-<n>` key (BTWL-42).
+- Reusable `ci-node.yml` (pnpm from `packageManager`, Node from `.nvmrc`, `make setup` + `make ci`,
+  coverage artifact) and its Python counterpart `ci-python.yml` (BTWL-37).
