@@ -14,3 +14,8 @@ jobs:
     uses: ./.github/workflows/pr-check.yml
     with:
       shared-ci-ref: ${{ github.event.pull_request.head.sha }}
+
+  gitleaks:
+    uses: ./.github/workflows/gitleaks.yml
+    with:
+      shared-ci-ref: ${{ github.event.pull_request.head.sha }}
